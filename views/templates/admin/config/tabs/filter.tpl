@@ -16,9 +16,9 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *}
 <div class="panel panel-default">
-  <h3><i class="icon icon-filter"></i> {l s='Filters' mod='elasticsearch'}</h3>
+  <h3><i class="icon icon-filter"></i> {l s='Filters' mod='tb2vuestorefront'}</h3>
   <div class="form-horizontal form-wrapper">
-    <filter-meta-list config-key="{Elasticsearch::METAS}"></filter-meta-list>
+    <filter-meta-list config-key="{Tb2vuestorefront::METAS}"></filter-meta-list>
   </div>
   <div class="panel-footer">
     <button type="submit" class="btn btn-default pull-right ajax-save-btn" :disabled="!canSubmit" @click="submitSettings">

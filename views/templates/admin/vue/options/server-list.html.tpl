@@ -31,16 +31,16 @@
       <thead>
         <tr>
           <th></th>
-          <th>{l s='Read' mod='elasticsearch'}</th>
-          <th>{l s='Write' mod='elasticsearch'}</th>
-          <th>{l s='URL' mod='elasticsearch'}</th>
+          <th>{l s='Read' mod='tb2vuestorefront'}</th>
+          <th>{l s='Write' mod='tb2vuestorefront'}</th>
+          <th>{l s='URL' mod='tb2vuestorefront'}</th>
           <th></th>
         </tr>
       </thead>
       <tfoot style="background-color: #ecf6fb">
         <tr class="filter">
           <td class="filter"
-              style="font-weight: 700; border-top: 1px solid #a0d0eb; border-bottom: 1px solid #a0d0eb;">{l s='Add server' mod='elasticsearch'}</td>
+              style="font-weight: 700; border-top: 1px solid #a0d0eb; border-bottom: 1px solid #a0d0eb;">{l s='Add server' mod='tb2vuestorefront'}</td>
           <td style="border-top: 1px solid #a0d0eb; border-bottom: 1px solid #a0d0eb;">
             <a href="#" v-if="serverDraft.read" class="list-action-enable action-enabled" @click="toggleDraftRead">
               <i class="icon icon-check"></i>
@@ -62,7 +62,7 @@
           </td>
           <td class="filter" style="border-top: 1px solid #a0d0eb; border-bottom: 1px solid #a0d0eb;">
             <button type="submit" class="btn btn-default" @click="addServer">
-              <i class="icon icon-plus"></i> {l s='Add' mod='elasticsearch'}
+              <i class="icon icon-plus"></i> {l s='Add' mod='tb2vuestorefront'}
             </button>
           </td>
         </tr>
@@ -110,7 +110,7 @@
           </td>
           <td>
             <button type="submit" class="btn btn-default" @click="deleteServer(server, $event)"><i
-                      class="icon icon-trash"></i> {l s='Delete' mod='elasticsearch'}</button>
+                      class="icon icon-trash"></i> {l s='Delete' mod='tb2vuestorefront'}</button>
           </td>
         </tr>
       </tbody>

@@ -4,7 +4,7 @@
     },
     "autoload": {
         "psr-0": {
-            "ElasticsearchModule\\": "classes/"
+            "Tb2vuestorefrontModule\\": "classes/"
         }
     }
 }

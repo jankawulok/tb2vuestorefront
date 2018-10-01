@@ -20,15 +20,15 @@
     <span class="label-tooltip"
           data-toggle="tooltip"
           title=""
-          data-original-title="{l s='You can drag and drop filters to adjust positions' mod='elasticsearch'}"
+          data-original-title="{l s='You can drag and drop filters to adjust positions' mod='tb2vuestorefront'}"
     >
-      {l s='Fields' mod='elasticsearch'}
+      {l s='Fields' mod='tb2vuestorefront'}
     </span>
   </label>
   <div class="col-lg-9">
     <section class="filter_panel">
       <header class="clearfix">
-        <span class="badge badge-info">{l s='Total fields:' mod='elasticsearch'} %% _.filter(metas, function (item) { return item.visible; }).length %%</span>
+        <span class="badge badge-info">{l s='Total fields:' mod='tb2vuestorefront'} %% _.filter(metas, function (item) { return item.visible; }).length %%</span>
       </header>
       <section class="filter_list">
         <ul class="list-unstyled sortable">
@@ -54,7 +54,7 @@
                      :checked="meta.enabled"
               />
               <label :for="'meta_enabled_' + meta.code + '_on'">
-                <p>{l s='On' mod='elasticsearch'}</p>
+                <p>{l s='On' mod='tb2vuestorefront'}</p>
               </label>
               <input
                       type="radio"
@@ -64,7 +64,7 @@
                       :checked="!meta.enabled"
               />
               <label :for="'meta_enabled_' + meta.code + '_off'">
-                <p>{l s='Off' mod='elasticsearch'}</p>
+                <p>{l s='Off' mod='tb2vuestorefront'}</p>
               </label>
                 <a class="slide-button btn"></a>
             </span>
@@ -93,7 +93,7 @@
             </div>
 
             <div class="pull-right">
-            <span>{l s='Field type:' mod='elasticsearch'} </span>
+            <span>{l s='Field type:' mod='tb2vuestorefront'} </span>
             <select @change="updateElasticType(meta.code, $event)" class="selectpicker col-lg-2" :disabled="meta.elastic_types ? meta.elastic_types.length <= 1 : true">
               <option v-for="elasticType in (meta.elastic_types ? _.sortBy(meta.elastic_types) : _.sortBy(elasticTypes))"
                       :value="elasticType"

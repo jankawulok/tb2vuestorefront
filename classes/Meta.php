@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace ElasticsearchModule;
+namespace Tb2vuestorefrontModule;
 
 use Context;
 use Db;
@@ -33,7 +33,7 @@ if (!defined('_TB_VERSION_')) {
 /**
  * Class SearchMeta
  *
- * @package ElasticsearchModule
+ * @package Tb2vuestorefrontModule
  */
 class Meta extends ObjectModel
 {
@@ -67,8 +67,8 @@ class Meta extends ObjectModel
      * @var array
      */
     public static $definition = [
-        'primary' => 'id_elasticsearch_meta',
-        'table' => 'elasticsearch_meta',
+        'primary' => 'id_tb2vuestorefront_meta',
+        'table' => 'tb2vuestorefront_meta',
         'fields' => [
             'meta_type'    => ['type' => self::TYPE_STRING,                 'validate' => 'isString',      'required' => true],
             'alias'        => ['type' => self::TYPE_STRING,                 'validate' => 'isString',      'required' => false],

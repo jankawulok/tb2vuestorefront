@@ -19,8 +19,8 @@
 
 use Elasticsearch\Client;
 use Elasticsearch\ClientBuilder;
-use ElasticsearchModule\IndexStatus;
-use ElasticsearchModule\Meta;
+use Tb2vuestorefrontModule\IndexStatus;
+use Tb2vuestorefrontModule\Meta;
 
 if (!defined('_TB_VERSION_')) {
     return;
@@ -31,10 +31,10 @@ require_once __DIR__.'/vendor/autoload.php';
 /**
  * Class Elasticsearch
  */
-class Elasticsearch extends Module
+class Tb2vuestorefront extends Module
 {
     // Include ajax functions
-    use \ElasticsearchModule\ModuleAjaxTrait;
+    use \Tb2vuestorefrontModule\ModuleAjaxTrait;
 
     // Config page
     const INDEX_CHUNK_SIZE = 'ELASTICSEARCH_ICHUNK_SIZE';
@@ -118,7 +118,7 @@ class Elasticsearch extends Module
     ];
 
     /**
-     * ElasticSearch constructor.
+     * Tb2vuestorefront constructor.
      *
      * @throws PrestaShopException
      */
@@ -315,17 +315,17 @@ class Elasticsearch extends Module
         }
 
         try {
-            Db::getInstance()->execute('DROP TABLE `'._DB_PREFIX_.'elasticsearch_index_status`');
+            Db::getInstance()->execute('DROP TABLE `'._DB_PREFIX_.'tb2vuestorefront_index_status`');
         } catch (PrestaShopException $e) {
             Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
         }
         try {
-            Db::getInstance()->execute('DROP TABLE `'._DB_PREFIX_.'elasticsearch_meta`');
+            Db::getInstance()->execute('DROP TABLE `'._DB_PREFIX_.'tb2vuestorefront_meta`');
         } catch (PrestaShopException $e) {
             Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
         }
         try {
-            Db::getInstance()->execute('DROP TABLE `'._DB_PREFIX_.'elasticsearch_meta_lang`');
+            Db::getInstance()->execute('DROP TABLE `'._DB_PREFIX_.'tb2vuestorefront_meta_lang`');
         } catch (PrestaShopException $e) {
             Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
         }
@@ -694,7 +694,7 @@ class Elasticsearch extends Module
     }
 
     /**
-     * Get ElasticSearch Client with read access
+     * Get Tb2vuestorefront Client with read access
      *
      * @return \Elasticsearch\Client|null
      *
@@ -756,7 +756,7 @@ class Elasticsearch extends Module
     }
 
     /**
-     * Get ElasticSearch Client with write access
+     * Get Tb2vuestorefront Client with write access
      *
      * @return \Elasticsearch\Client|null
      */
@@ -986,7 +986,7 @@ class Elasticsearch extends Module
                             && (int) $product->elastic_id_shop === (int) $failure['id_shop']
                             && (int) $product->elastic_id_lang === (int) $failure['id_lang']
                         ) {
-                            Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."elasticsearch_index_status` (`id_product`,`id_lang`,`id_shop`, `error`) VALUES ('{$failed['id_product']}', '{$failed['id_lang']}', '{$failed['id_shop']}', '{$failed['error']}') ON DUPLICATE KEY UPDATE `error` = VALUES(`error`)");
+                            Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."tb2vuestorefront_index_status` (`id_product`,`id_lang`,`id_shop`, `error`) VALUES ('{$failed['id_product']}', '{$failed['id_lang']}', '{$failed['id_shop']}', '{$failed['error']}') ON DUPLICATE KEY UPDATE `error` = VALUES(`error`)");
 
                             unset($products[$index]);
                         }
@@ -1002,7 +1002,7 @@ class Elasticsearch extends Module
             }
             $values = rtrim($values, ',');
             if ($values) {
-                Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."elasticsearch_index_status` (`id_product`,`id_lang`,`id_shop`, `date_upd`, `error`) VALUES $values ON DUPLICATE KEY UPDATE `date_upd` = VALUES(`date_upd`), `error` = ''");
+                Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."tb2vuestorefront_index_status` (`id_product`,`id_lang`,`id_shop`, `date_upd`, `error`) VALUES $values ON DUPLICATE KEY UPDATE `date_upd` = VALUES(`date_upd`), `error` = ''");
             }
 
             $chunks--;
@@ -1073,7 +1073,7 @@ class Elasticsearch extends Module
     }
 
     /**
-     * Get ElasticSearch version
+     * Get Tb2vuestorefront version
      *
      * @return string
      */
@@ -1139,7 +1139,7 @@ class Elasticsearch extends Module
                     ];
                 }
 
-                $categoryPath = \ElasticsearchModule\Fetcher::getCategoryPath($category->id, $idLang);
+                $categoryPath = \Tb2vuestorefrontModule\Fetcher::getCategoryPath($category->id, $idLang);
 
                 return [
                     'aggregationCode' => static::getAlias('categories'),

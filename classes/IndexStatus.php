@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace ElasticsearchModule;
+namespace Tb2vuestorefrontModule;
 
 use Configuration;
 use Context;
@@ -35,7 +35,7 @@ if (!defined('_TB_VERSION_')) {
 /**
  * Class Indexer
  *
- * @package ElasticsearchModule
+ * @package Tb2vuestorefrontModule
  */
 class IndexStatus extends \ObjectModel
 {
@@ -51,8 +51,8 @@ class IndexStatus extends \ObjectModel
      * @var array
      */
     public static $definition = [
-        'primary' => 'id_elasticsearch_index_status',
-        'table' => 'elasticsearch_index_status',
+        'primary' => 'id_tb2vuestorefront_index_status',
+        'table' => 'tb2vuestorefront_index_status',
         'fields'  => [
             'id_product' => ['type' => self::TYPE_INT,  'validate' => 'isUnsignedInt', 'required' => true],
             'id_lang'    => ['type' => self::TYPE_INT,  'validate' => 'isUnsignedInt', 'required' => true],

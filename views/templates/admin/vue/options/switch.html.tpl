@@ -37,7 +37,7 @@
               @click="setChecked(1)"
       />
       <label :for="configKey + '_on'">
-        <p>{l s='Yes' mod='elasticsearch'}</p>
+        <p>{l s='Yes' mod='tb2vuestorefront'}</p>
       </label>
       <input
               type="radio"
@@ -48,7 +48,7 @@
               @click="setChecked(0)"
       />
       <label :for="configKey + '_off'">
-        <p>{l s='No' mod='elasticsearch'}</p>
+        <p>{l s='No' mod='tb2vuestorefront'}</p>
       </label>
         <a class="slide-button btn"></a>
     </span>

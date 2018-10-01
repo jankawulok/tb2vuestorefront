@@ -16,14 +16,14 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *}
 <div class="panel panel-default">
-  <h3><i class="icon icon-search"></i> {l s='Search' mod='elasticsearch'}</h3>
+  <h3><i class="icon icon-search"></i> {l s='Search' mod='tb2vuestorefront'}</h3>
   <div class="form-horizontal form-wrapper">
-    <search-meta-list config-key="{Elasticsearch::METAS}"></search-meta-list>
+    <search-meta-list config-key="{Tb2vuestorefront::METAS}"></search-meta-list>
     <div class="alert alert-info">
-      <span>{l s='In this section you can customize the query used by the module. There are at least three placeholders you should add (`%s`, `%s` and `%s`)' mod='elasticsearch' sprintf=['QUERY', 'FIELDS', 'FILTERS']}</span>
+      <span>{l s='In this section you can customize the query used by the module. There are at least three placeholders you should add (`%s`, `%s` and `%s`)' mod='tb2vuestorefront' sprintf=['QUERY', 'FIELDS', 'FILTERS']}</span>
       <ul>
-        <li><code>||QUERY||</code>: {l s='This is the literal query string and will result in e.g.' mod='elasticsearch'} <code>"search query"</code>
-        <li><code>||FIELDS||</code>: {l s='This is the fields array of fields to search in. An example is' mod='elasticsearch'} <code>["name", "description"]</code>
+        <li><code>||QUERY||</code>: {l s='This is the literal query string and will result in e.g.' mod='tb2vuestorefront'} <code>"search query"</code>
+        <li><code>||FIELDS||</code>: {l s='This is the fields array of fields to search in. An example is' mod='tb2vuestorefront'} <code>["name", "description"]</code>
       </ul>
     </div>
     <query-json config-key="{ElasticSearch::QUERY_JSON}"></query-json>

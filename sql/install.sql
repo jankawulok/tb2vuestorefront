@@ -1,19 +1,19 @@
-CREATE TABLE IF NOT EXISTS `PREFIX_elasticsearch_index_status` (
-  `id_elasticsearch_index_status` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `PREFIX_tb2vuestorefront_index_status` (
+  `id_tb2vuestorefront_index_status` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
   `id_product`                    INT(11) UNSIGNED NOT NULL,
   `id_shop`                       INT(11) UNSIGNED NOT NULL,
   `id_lang`                       INT(11) UNSIGNED NOT NULL,
   `date_upd`                      DATETIME         NOT NULL,
   `error`                         TEXT,
-  PRIMARY KEY (`id_elasticsearch_index_status`),
+  PRIMARY KEY (`id_tb2vuestorefront_index_status`),
   UNIQUE (`id_product`, `id_shop`, `id_lang`)
 )
   ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   DEFAULT COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `PREFIX_elasticsearch_meta` (
-  `id_elasticsearch_meta` INT(11) UNSIGNED    NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `PREFIX_tb2vuestorefront_meta` (
+  `id_tb2vuestorefront_meta` INT(11) UNSIGNED    NOT NULL AUTO_INCREMENT,
   `alias`                 VARCHAR(190)        NOT NULL,
   `code`                  VARCHAR(190)        NOT NULL,
   `enabled`               TINYINT(1) UNSIGNED NOT NULL DEFAULT '1',
@@ -26,18 +26,18 @@ CREATE TABLE IF NOT EXISTS `PREFIX_elasticsearch_meta` (
   `operator`              TINYINT(1) UNSIGNED NOT NULL DEFAULT '1',
   `display_type`          INT(11) UNSIGNED    NOT NULL DEFAULT '1',
   `result_limit`          INT(11) UNSIGNED    NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id_elasticsearch_meta`),
+  PRIMARY KEY (`id_tb2vuestorefront_meta`),
   UNIQUE (`alias`)
 )
   ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   DEFAULT COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `PREFIX_elasticsearch_meta_lang` (
-  `id_elasticsearch_meta` INT(11) UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS `PREFIX_tb2vuestorefront_meta_lang` (
+  `id_tb2vuestorefront_meta` INT(11) UNSIGNED NOT NULL,
   `id_lang`               INT(11) UNSIGNED NOT NULL,
   `name`                  VARCHAR(255)     NOT NULL,
-  PRIMARY KEY (`id_elasticsearch_meta`, `id_lang`)
+  PRIMARY KEY (`id_tb2vuestorefront_meta`, `id_lang`)
 )
   ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4

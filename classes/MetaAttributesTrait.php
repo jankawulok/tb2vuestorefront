@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace ElasticsearchModule;
+namespace Tb2vuestorefrontModule;
 
 use Context;
 use Configuration;

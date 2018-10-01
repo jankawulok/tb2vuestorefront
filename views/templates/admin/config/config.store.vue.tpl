@@ -29,7 +29,7 @@
         initialConfig: JSON.stringify({$config|json_encode}),
         tab: window.location.hash.substr(5) || '{$initialTab|escape:'javascript':'UTF-8'}',
         status: {$status|json_encode},
-        elasticsearchVersion: '{l s='Loading...' mod='elasticsearch' js=1}',
+        elasticsearchVersion: '{l s='Loading...' mod='tb2vuestorefront' js=1}',
         elasticErrors: null,
         indexing: false,
         cancelingIndexing: false,

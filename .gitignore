@@ -1,6 +1,7 @@
 vendor/
 composer.lock
 .idea/
+.phpintel/
 *elasticsearch*.zip
 *.bak
 views/templates/themes/minikneet-bootstrap

@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace ElasticsearchModule;
+namespace Tb2vuestorefrontModule;
 
 use AttributeGroup;
 use Category;
@@ -51,7 +51,7 @@ if (!defined('_TB_VERSION_')) {
  * `$attributes` array. If the value `null` is used, it will grab the property directly from the
  * thirty bees Product object.
  *
- * @package ElasticsearchModule
+ * @package Tb2vuestorefrontModule
  */
 class Fetcher
 {
@@ -396,7 +396,7 @@ class Fetcher
         }
 
         // Default properties
-        $propertyAliases = \Elasticsearch::getAliases(array_keys(static::$attributes));
+        $propertyAliases = \Tb2vuestorefront::getAliases(array_keys(static::$attributes));
         foreach (static::$attributes as $propName => $propItems) {
             $propAlias = $propertyAliases[$propName];
             if (!$metas[$propAlias]['enabled'] && !in_array($propName, [
@@ -440,7 +440,7 @@ class Fetcher
                     });
                     $featureCode = Tools::link_rewrite(current($frontFeature)['name']);
                 }
-                $featureAlias = \Elasticsearch::getAlias($featureCode, 'feature');
+                $featureAlias = \Tb2vuestorefront::getAlias($featureCode, 'feature');
                 if (!$metas[$featureAlias]['enabled']) {
                     continue;
                 }
@@ -459,7 +459,7 @@ class Fetcher
             $groupNames = array_map(function ($attribute) {
                 return Tools::link_rewrite($attribute['group_name']);
             }, $attributeGroups);
-            $attributeAliases = \Elasticsearch::getAliases($groupNames, 'attribute');
+            $attributeAliases = \Tb2vuestorefront::getAliases($groupNames, 'attribute');
             if (count($groupNames) === count($attributeAliases)) {
                 foreach (array_combine($attributeAliases, $attributeGroups) as $groupName => $attribute) {
                     if (!$metas[$groupName]['enabled']) {
@@ -473,7 +473,7 @@ class Fetcher
                         $attributeGroup = new AttributeGroup($attribute['id_attribute_group'], $idLangDefault);
                         $attributeCode = Tools::link_rewrite($attributeGroup->name);
                     }
-                    $attributeAlias = \Elasticsearch::getAlias($attributeCode, 'attribute');
+                    $attributeAlias = \Tb2vuestorefront::getAlias($attributeCode, 'attribute');
 
                     if (!isset($elasticProduct->{$attributeAlias}) || !is_array($elasticProduct->{$attributeAlias})) {
                         $elasticProduct->{$attributeAlias} = [];
@@ -1151,7 +1151,7 @@ class Fetcher
                 $colors = static::getAttributesColorList($productsNeedCache, true, $product->elastic_id_lang);
             }
             $tpl = Context::getContext()->smarty->createTemplate(
-                \Elasticsearch::tpl('front/product-list-colors.tpl'),
+                \Tb2vuestorefront::tpl('front/product-list-colors.tpl'),
                 Product::getColorsListCacheId($product->id)
             );
             if (isset($colors[$product->id])) {
@@ -1169,7 +1169,7 @@ class Fetcher
 
             if (!in_array($product->id, $productsNeedCache) || isset($colors[$product->id])) {
                 $product->color_list = $tpl->fetch(
-                    \Elasticsearch::tpl('front/product-list-colors.tpl'),
+                    \Tb2vuestorefront::tpl('front/product-list-colors.tpl'),
                     Product::getColorsListCacheId($product->id)
                 );
             } else {

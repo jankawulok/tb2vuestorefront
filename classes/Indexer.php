@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace ElasticsearchModule;
+namespace Tb2vuestorefrontModule;
 
 use Configuration;
 use Elasticsearch;
@@ -32,7 +32,7 @@ if (!defined('_TB_VERSION_')) {
 /**
  * Class Indexer
  *
- * @package ElasticsearchModule
+ * @package Tb2vuestorefrontModule
  */
 class Indexer
 {
@@ -119,7 +119,7 @@ class Indexer
      */
     public static function eraseIndices($idLangs = null, $idShops = null)
     {
-        $indexPrefix = Configuration::get(Elasticsearch::INDEX_PREFIX);
+        $indexPrefix = Configuration::get(Tb2vuestorefront::INDEX_PREFIX);
 
         if (!is_array($idLangs) || empty($idLangs)) {
             $idLangs = Language::getLanguages(true, false, true);
@@ -129,7 +129,7 @@ class Indexer
         }
 
         // Delete the indices first
-        $client = Elasticsearch::getWriteClient();
+        $client = Tb2vuestorefront::getWriteClient();
         if (!$client instanceof \Elasticsearch\Client) {
             return;
         }
@@ -159,7 +159,7 @@ class Indexer
      */
     public static function createMappings($idLangs = null, $idShops = null)
     {
-        $indexPrefix = Configuration::get(Elasticsearch::INDEX_PREFIX);
+        $indexPrefix = Configuration::get(Tb2vuestorefront::INDEX_PREFIX);
 
         if (!is_array($idLangs) || empty($idLangs)) {
             $idLangs = Language::getLanguages(true, false, true);
@@ -213,7 +213,7 @@ class Indexer
         }
 
         // Push the mappings to Elasticsearch
-        $client = Elasticsearch::getWriteClient();
+        $client = Tb2vuestorefront::getWriteClient();
         if (!$client) {
             return;
         }
@@ -223,8 +223,8 @@ class Indexer
                     'index' => "{$indexPrefix}_{$idShop}_{$idLang}",
                     'body'  => [
                         'settings' => [
-                            'number_of_shards'   => (int) Configuration::get(Elasticsearch::SHARDS),
-                            'number_of_replicas' => (int) Configuration::get(Elasticsearch::REPLICAS),
+                            'number_of_shards'   => (int) Configuration::get(Tb2vuestorefront::SHARDS),
+                            'number_of_replicas' => (int) Configuration::get(Tb2vuestorefront::REPLICAS),
                         ],
                         'mappings' => [
                             'product' => [
@@ -237,7 +237,7 @@ class Indexer
                     ],
                 ];
 
-                if ($stopWords = Configuration::get(Elasticsearch::STOP_WORDS, $idLang, null, $idShop)) {
+                if ($stopWords = Configuration::get(Tb2vuestorefront::STOP_WORDS, $idLang, null, $idShop)) {
                     $analysis = [
                         'analyzer' => [
                             'tb_analyzer' => [

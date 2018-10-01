@@ -18,27 +18,27 @@
 <div class="form-horizontal">
   <div class="panel">
     <div class="panel-heading">
-      <i class="icon-cogs"></i> {l s='Settings' mod='elasticsearch'}
+      <i class="icon-cogs"></i> {l s='Settings' mod='tb2vuestorefront'}
     </div>
     <div class="form-wrapper">
-      <number-input :display-name="'{l s='Number of shards' mod='elasticsearch' js=1}'"
-                    config-key="{Elasticsearch::SHARDS}"
+      <number-input :display-name="'{l s='Number of shards' mod='tb2vuestorefront' js=1}'"
+                    config-key="{Tb2vuestorefront::SHARDS}"
                     max-width="100"
       ></number-input>
-      <number-input :display-name="'{l s='Number of replicas' mod='elasticsearch' js=1}'"
-                    config-key="{Elasticsearch::REPLICAS}"
+      <number-input :display-name="'{l s='Number of replicas' mod='tb2vuestorefront' js=1}'"
+                    config-key="{Tb2vuestorefront::REPLICAS}"
                     max-width="100"
       ></number-input>
-      <text-input :display-name="'{l s='Index prefix' mod='elasticsearch' js=1}'"
-                  config-key="{Elasticsearch::INDEX_PREFIX}"
+      <text-input :display-name="'{l s='Index prefix' mod='tb2vuestorefront' js=1}'"
+                  config-key="{Tb2vuestorefront::INDEX_PREFIX}"
                   max-width="200"
       ></text-input>
-      <lang-text-input :display-name="'{l s='Stop words' mod='elasticsearch' js=1}'"
-                       config-key="{Elasticsearch::STOP_WORDS}"
-                       description="{l s='Separate the stop words by a comma. _english_ represents the array with common stop words in English' mod='elasticsearch'}"
+      <lang-text-input :display-name="'{l s='Stop words' mod='tb2vuestorefront' js=1}'"
+                       config-key="{Tb2vuestorefront::STOP_WORDS}"
+                       description="{l s='Separate the stop words by a comma. _english_ represents the array with common stop words in English' mod='tb2vuestorefront'}"
       ></lang-text-input>
-      <toggle :display-name="'{l s='Enable logging' mod='elasticsearch' js=1}'"
-              config-key="{Elasticsearch::LOGGING_ENABLED}"
+      <toggle :display-name="'{l s='Enable logging' mod='tb2vuestorefront' js=1}'"
+              config-key="{Tb2vuestorefront::LOGGING_ENABLED}"
       ></toggle>
     </div>
     <div class="panel-footer">

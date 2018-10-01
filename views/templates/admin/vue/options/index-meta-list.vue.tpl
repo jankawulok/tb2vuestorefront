@@ -70,11 +70,11 @@
         getMetaType: function (metaType) {
           switch (metaType) {
             case 'attribute':
-              return '{l s='attr.' mod='elasticsearch' js=1}';
+              return '{l s='attr.' mod='tb2vuestorefront' js=1}';
             case 'feature':
-              return '{l s='feat.' mod='elasticsearch' js=1}';
+              return '{l s='feat.' mod='tb2vuestorefront' js=1}';
             default:
-              return '{l s='prop.' mod='elasticsearch' js=1}';
+              return '{l s='prop.' mod='tb2vuestorefront' js=1}';
           }
         },
         toggleMetaEnabled: _.debounce(function (meta, event) {

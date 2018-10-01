@@ -64,8 +64,8 @@
               });
             } else {
               swal({
-                title: '{l s='Error!' mod='elasticsearch' js=1}',
-                text: '{l s='Unable to connect with the Elasticsearch server. Has the connection been configured?' mod='elasticsearch' js=1}',
+                title: '{l s='Error!' mod='tb2vuestorefront' js=1}',
+                text: '{l s='Unable to connect with the Elasticsearch server. Has the connection been configured?' mod='tb2vuestorefront' js=1}',
                 icon: 'error'
               });
 
@@ -96,8 +96,8 @@
           } else {
             if (ajaxAttempts <= 0) {
               swal({
-                title: '{l s='Error!' mod='elasticsearch' js=1}',
-                text: '{l s='Error while contacting the webserver. Please check the server logs for errors and correct them if necessary.' mod='elasticsearch' js=1}',
+                title: '{l s='Error!' mod='tb2vuestorefront' js=1}',
+                text: '{l s='Error while contacting the webserver. Please check the server logs for errors and correct them if necessary.' mod='tb2vuestorefront' js=1}',
                 icon: 'error'
               });
             }
@@ -310,7 +310,7 @@
               if (this.status >= 200 && this.status < 400) {
                 // Success!
                 self.$store.commit('setInitialConfig', JSON.stringify(self.$store.state.config));
-                window.showSuccessMessage('{l s='Settings have been successfully updated' mod='elasticsearch' js=1}');
+                window.showSuccessMessage('{l s='Settings have been successfully updated' mod='tb2vuestorefront' js=1}');
               } else {
                 // Error :(
               }

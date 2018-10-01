@@ -74,13 +74,13 @@ class ElasticsearchcronModuleFrontController extends ModuleFrontController
         if (isset($_GET['clear'])) {
             try {
                 // Delete the indices first
-                ElasticsearchModule\Indexer::eraseIndices(null, [$idShop]);
+                Tb2vuestorefrontModule\Indexer::eraseIndices(null, [$idShop]);
 
                 // Reset the mappings
-                ElasticsearchModule\Indexer::createMappings(null, [$idShop]);
+                Tb2vuestorefrontModule\Indexer::createMappings(null, [$idShop]);
 
                 // Erase the index status for the current store
-                ElasticsearchModule\IndexStatus::erase($idShop);
+                Tb2vuestorefrontModule\IndexStatus::erase($idShop);
             } catch (Exception $e) {
             }
         }

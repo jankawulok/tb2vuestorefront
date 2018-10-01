@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace ElasticsearchModule;
+namespace Tb2vuestorefrontModule;
 
 use Configuration;
 use Context;
@@ -35,7 +35,7 @@ if (!defined('_TB_VERSION_')) {
 /**
  * Trait ModuleAjaxTrait
  *
- * @package ElasticsearchModule
+ * @package Tb2vuestorefrontModule
  */
 trait ModuleAjaxTrait
 {
@@ -86,7 +86,7 @@ trait ModuleAjaxTrait
         }
 
         try {
-            Configuration::updateValue(Elasticsearch::CONFIG_UPDATED, true);
+            Configuration::updateValue(Tb2vuestorefront::CONFIG_UPDATED, true);
         } catch (\PrestaShopException $e) {
             \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
         }
@@ -128,7 +128,7 @@ trait ModuleAjaxTrait
             $amount = 100;
         }
         try {
-            $index = Configuration::get(Elasticsearch::INDEX_PREFIX);
+            $index = Configuration::get(Tb2vuestorefront::INDEX_PREFIX);
         } catch (\PrestaShopException $e) {
             \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
 
@@ -136,8 +136,8 @@ trait ModuleAjaxTrait
         }
         $idShop = Context::getContext()->shop->id;
         $idLang = Context::getContext()->language->id;
-        $dateUpdAlias = Elasticsearch::getAlias('date_upd');
-        $priceTaxExclAlias = Elasticsearch::getAlias('price_tax_excl');
+        $dateUpdAlias = Tb2vuestorefront::getAlias('date_upd');
+        $priceTaxExclAlias = Tb2vuestorefront::getAlias('price_tax_excl');
         $metas = Meta::getAllMetas([$idLang]);
         if (isset($metas[$idLang])) {
             $metas = $metas[$idLang];
@@ -248,7 +248,7 @@ trait ModuleAjaxTrait
                         && (int) $product->elastic_id_lang === (int) $failure['id_lang']
                     ) {
                         try {
-                            Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."elasticsearch_index_status` (`id_product`,`id_lang`,`id_shop`, `error`) VALUES ('{$failed['id_product']}', '{$failed['id_lang']}', '{$failed['id_shop']}', '{$failed['error']}') ON DUPLICATE KEY UPDATE `error` = VALUES(`error`)");
+                            Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."tb2vuestorefront_index_status` (`id_product`,`id_lang`,`id_shop`, `error`) VALUES ('{$failed['id_product']}', '{$failed['id_lang']}', '{$failed['id_shop']}', '{$failed['error']}') ON DUPLICATE KEY UPDATE `error` = VALUES(`error`)");
                         } catch (\PrestaShopException $e) {
                             \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
                         }
@@ -267,7 +267,7 @@ trait ModuleAjaxTrait
         $values = rtrim($values, ',');
         if ($values) {
             try {
-                Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."elasticsearch_index_status` (`id_product`,`id_lang`,`id_shop`, `date_upd`, `error`) VALUES $values ON DUPLICATE KEY UPDATE `date_upd` = VALUES(`date_upd`), `error` = ''");
+                Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."tb2vuestorefront_index_status` (`id_product`,`id_lang`,`id_shop`, `date_upd`, `error`) VALUES $values ON DUPLICATE KEY UPDATE `date_upd` = VALUES(`date_upd`), `error` = ''");
             } catch (\PrestaShopException $e) {
                 \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
             }
@@ -304,7 +304,7 @@ trait ModuleAjaxTrait
         }
 
         try {
-            Configuration::updateValue(Elasticsearch::CONFIG_UPDATED, false);
+            Configuration::updateValue(Tb2vuestorefront::CONFIG_UPDATED, false);
         } catch (\PrestaShopException $e) {
             \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
         }

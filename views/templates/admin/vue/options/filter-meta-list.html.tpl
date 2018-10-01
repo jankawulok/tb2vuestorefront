@@ -20,16 +20,16 @@
     <span class="label-tooltip"
           data-toggle="tooltip"
           title=""
-          data-original-title="{l s='You can drag and drop filters to adjust positions' mod='elasticsearch'}"
+          data-original-title="{l s='You can drag and drop filters to adjust positions' mod='tb2vuestorefront'}"
     >
-      {l s='Fields' mod='elasticsearch'}
+      {l s='Fields' mod='tb2vuestorefront'}
     </span>
   </label>
   <div class="col-lg-9">
     <section class="filter_panel">
       <header class="clearfix">
-        <span class="badge badge-info">{l s='Total filters:' mod='elasticsearch'} %% _.filter(metas, function (item) { return item.visible; }).length %%</span>
-        <span class="badge badge-success">{l s='Enabled filters:' mod='elasticsearch'} %% nbAggregatable %%</span>
+        <span class="badge badge-info">{l s='Total filters:' mod='tb2vuestorefront'} %% _.filter(metas, function (item) { return item.visible; }).length %%</span>
+        <span class="badge badge-success">{l s='Enabled filters:' mod='tb2vuestorefront'} %% nbAggregatable %%</span>
       </header>
       <section class="filter_list">
         <ul class="list-unstyled sortable">
@@ -51,7 +51,7 @@
                      :checked="meta.aggregatable"
               />
               <label :for="'meta_aggregatable_' + meta.code + '_on'">
-                <p>{l s='Yes' mod='elasticsearch'}</p>
+                <p>{l s='Yes' mod='tb2vuestorefront'}</p>
               </label>
               <input
                       type="radio"
@@ -61,50 +61,50 @@
                       :checked="!meta.aggregatable"
               />
               <label :for="'meta_aggregatable_' + meta.code + '_off'">
-                <p>{l s='No' mod='elasticsearch'}</p>
+                <p>{l s='No' mod='tb2vuestorefront'}</p>
               </label>
                 <a class="slide-button btn"></a>
             </span>
             <meta-badge :meta="meta" :id-lang="idLang" :config-key="configKey" style="max-width: 200px"></meta-badge>
             <div class="pull-right col-lg-8 col-md-4 col-sm-4">
               <div class="col-lg-6">
-                <label class="control-label col-lg-4">{l s= 'Filter items limit:' mod='elasticsearch'}</label>
+                <label class="control-label col-lg-4">{l s= 'Filter items limit:' mod='tb2vuestorefront'}</label>
                 <div class="col-lg-6">
                   <select @change="filterLimitChanged(meta, $event)" class="selectpicker">
-                    <option value="0" :selected="parseInt(meta.result_limit, 10) === 0">{l s='No limit' mod='elasticsearch'}</option>
+                    <option value="0" :selected="parseInt(meta.result_limit, 10) === 0">{l s='No limit' mod='tb2vuestorefront'}</option>
                     <option v-for="limit in [3, 4, 5, 10, 20]" :value.once="limit" :selected="meta.result_limit == limit">%% limit %%</option>
                   </select>
                 </div>
               </div>
               <div class="col-lg-6">
-                <label class="control-label col-lg-4">{l s='Filter style:' mod='elasticsearch'}</label>
+                <label class="control-label col-lg-4">{l s='Filter style:' mod='tb2vuestorefront'}</label>
                 <div class="col-lg-8">
                   <select @change="filterStyleChanged(meta, $event)" class="selectpicker">
-                    <option value="1" :selected="parseInt(meta.display_type) === 1">{l s='Checkbox' mod='elasticsearch'}</option>
-                    {*<option value="2" :selected="parseInt(meta.display_type) === 2">{l s='Radio button' mod='elasticsearch'}</option>*}
-                    {*<option value="3" :selected="parseInt(meta.display_type) === 3">{l s='Drop-down list' mod='elasticsearch'}</option>*}
+                    <option value="1" :selected="parseInt(meta.display_type) === 1">{l s='Checkbox' mod='tb2vuestorefront'}</option>
+                    {*<option value="2" :selected="parseInt(meta.display_type) === 2">{l s='Radio button' mod='tb2vuestorefront'}</option>*}
+                    {*<option value="3" :selected="parseInt(meta.display_type) === 3">{l s='Drop-down list' mod='tb2vuestorefront'}</option>*}
                     <option value="4"
                             :selected.once="parseInt(meta.display_type) === 4"
-                            v-if="meta.code === '{Elasticsearch::getAlias(price_tax_excl)|escape:'javascript':'UTF-8'}'"
+                            v-if="meta.code === '{Tb2vuestorefront::getAlias(price_tax_excl)|escape:'javascript':'UTF-8'}'"
                     >
-                      {l s='Slider' mod='elasticsearch'}
+                      {l s='Slider' mod='tb2vuestorefront'}
                     </option>
                     <option value="5"
                             :selected.once="parseInt(meta.display_type) === 5"
-                            data-content="<span>{l s='Color' mod='elasticsearch'}</span> <img src='{$smarty.const.__PS_BASE_URI__|escape:'htmlall':'UTF-8'}img/admin/color_swatch.png' width='16' height='16'>"
+                            data-content="<span>{l s='Color' mod='tb2vuestorefront'}</span> <img src='{$smarty.const.__PS_BASE_URI__|escape:'htmlall':'UTF-8'}img/admin/color_swatch.png' width='16' height='16'>"
                             v-if="!meta.elastic_types || _.includes(meta.elastic_types, 'text') || _.includes(meta.elastic_types, 'keyword')"
                     >
-                      {l s='Color' mod='elasticsearch'}
+                      {l s='Color' mod='tb2vuestorefront'}
                     </option>
                   </select>
                 </div>
               </div>
               <div class="col-lg-6">
-                <label class="control-label col-lg-4">{l s='Operator:' mod='elasticsearch'}</label>
+                <label class="control-label col-lg-4">{l s='Operator:' mod='tb2vuestorefront'}</label>
                 <div class="col-lg-8">
                   <select @change="operatorChanged(meta, $event)" class="selectpicker">
-                    <option value="0" :selected="parseInt(meta.operator) === 0">{l s='AND (conjunctive)' mod='elasticsearch'}</option>
-                    <option value="1" :selected="parseInt(meta.operator) === 1">{l s='OR (disjunctive)' mod='elasticsearch'}</option>
+                    <option value="0" :selected="parseInt(meta.operator) === 0">{l s='AND (conjunctive)' mod='tb2vuestorefront'}</option>
+                    <option value="1" :selected="parseInt(meta.operator) === 1">{l s='OR (disjunctive)' mod='tb2vuestorefront'}</option>
                   </select>
                 </div>
               </div>

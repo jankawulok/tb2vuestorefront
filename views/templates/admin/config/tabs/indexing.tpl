@@ -16,9 +16,9 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *}
 <div class="panel panel-default">
-  <h3><i class="icon icon-sort"></i> {l s='Indexing' mod='elasticsearch'}</h3>
+  <h3><i class="icon icon-sort"></i> {l s='Indexing' mod='tb2vuestorefront'}</h3>
   <div class="form-horizontal form-wrapper">
-    <index-meta-list config-key="{Elasticsearch::METAS}"></index-meta-list>
+    <index-meta-list config-key="{Tb2vuestorefront::METAS}"></index-meta-list>
   </div>
   <div class="panel-footer">
     <button type="submit"
