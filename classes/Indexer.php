@@ -36,15 +36,15 @@ if (!defined('_TB_VERSION_')) {
  */
 class Indexer
 {
-    /** @var Fetcher $fetcher */
-    protected $fetcher;
+    /** @var ProductFetcher $productFetcher */
+    protected $productFetcher;
 
     /**
      * Indexer constructor.
      */
     public function __construct()
     {
-        $this->fetcher = new Fetcher();
+        $this->productFetcher = new ProductFetcher();
     }
 
     private function getCategories($idLang)

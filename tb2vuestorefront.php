@@ -1139,7 +1139,7 @@ class Tb2vuestorefront extends Module
                     ];
                 }
 
-                $categoryPath = \Tb2vuestorefrontModule\Fetcher::getCategoryPath($category->id, $idLang);
+                $categoryPath = \Tb2vuestorefrontModule\ProductFetcher::getCategoryPath($category->id, $idLang);
 
                 return [
                     'aggregationCode' => static::getAlias('categories'),

@@ -71,8 +71,8 @@ trait MetaAttributesTrait
         $metas = static::getAllMetas();
 
         $type = 'property';
-        foreach (Fetcher::$attributes as $defaultAttributeName => $defaultAttribute) {
             $id = "{$defaultAttributeName}property";
+        foreach (ProductFetcher::$attributes as $defaultAttributeName => $defaultAttribute) {
             $position = isset($metas[$idLang][$id]['position']) ? $metas[$idLang][$id]['position'] : 0;
             $name = [];
             try {
@@ -123,14 +123,14 @@ trait MetaAttributesTrait
                 'result_limit'      => isset($metas[$idLang][$id]['result_limit'])
                     ? (int) $metas[$idLang][$id]['result_limit']
                     : 0,
-                'type_configurable' => isset(Fetcher::$attributes[$defaultAttributeName]['type_configurable'])
-                    ? Fetcher::$attributes[$defaultAttributeName]['type_configurable']
+                'type_configurable' => isset(ProductFetcher::$attributes[$defaultAttributeName]['type_configurable'])
+                    ? ProductFetcher::$attributes[$defaultAttributeName]['type_configurable']
                     : false,
-                'elastic_types'     => isset(Fetcher::$attributes[$defaultAttributeName]['elastic_types'])
-                    ? Fetcher::$attributes[$defaultAttributeName]['elastic_types']
+                'elastic_types'     => isset(ProductFetcher::$attributes[$defaultAttributeName]['elastic_types'])
+                    ? ProductFetcher::$attributes[$defaultAttributeName]['elastic_types']
                     : null,
-                'visible'           => isset(Fetcher::$attributes[$defaultAttributeName]['visible'])
-                    ? Fetcher::$attributes[$defaultAttributeName]['visible']
+                'visible'           => isset(ProductFetcher::$attributes[$defaultAttributeName]['visible'])
+                    ? ProductFetcher::$attributes[$defaultAttributeName]['visible']
                     : true,
             ];
             if ($position) {
@@ -187,14 +187,14 @@ trait MetaAttributesTrait
                     'result_limit'      => isset($metas[$idLang][$id]['result_limit'])
                         ? (int) $metas[$idLang][$id]['result_limit']
                         : 0,
-                    'type_configurable' => isset(Fetcher::$attributes[$code]['type_configurable'])
-                        ? (bool) Fetcher::$attributes[$code]['type_configurable']
+                    'type_configurable' => isset(ProductFetcher::$attributes[$code]['type_configurable'])
+                        ? (bool) ProductFetcher::$attributes[$code]['type_configurable']
                         : false,
-                    'elastic_types'     => isset(Fetcher::$attributes[$code]['elastic_types'])
-                        ? Fetcher::$attributes[$code]['elastic_types']
+                    'elastic_types'     => isset(ProductFetcher::$attributes[$code]['elastic_types'])
+                        ? ProductFetcher::$attributes[$code]['elastic_types']
                         : null,
-                    'visible'           => isset(Fetcher::$attributes[$code]['visible'])
-                        ? (bool) Fetcher::$attributes[$code]['visible']
+                    'visible'           => isset(ProductFetcher::$attributes[$code]['visible'])
+                        ? (bool) ProductFetcher::$attributes[$code]['visible']
                         : true,
                 ];
                 if ($position) {
@@ -254,14 +254,14 @@ trait MetaAttributesTrait
                     'result_limit'      => isset($metas[$idLang][$id]['result_limit'])
                         ? (int) $metas[$idLang][$id]['result_limit']
                         : 0,
-                    'type_configurable' => isset(Fetcher::$attributes[$code]['type_configurable'])
-                        ? (bool) Fetcher::$attributes[$code]['type_configurable']
+                    'type_configurable' => isset(ProductFetcher::$attributes[$code]['type_configurable'])
+                        ? (bool) ProductFetcher::$attributes[$code]['type_configurable']
                         : false,
-                    'elastic_types'     => isset(Fetcher::$attributes[$code]['elastic_types'])
-                        ? Fetcher::$attributes[$code]['elastic_types']
+                    'elastic_types'     => isset(ProductFetcher::$attributes[$code]['elastic_types'])
+                        ? ProductFetcher::$attributes[$code]['elastic_types']
                         : null,
-                    'visible'           => isset(Fetcher::$attributes[$code]['visible'])
-                        ? Fetcher::$attributes[$code]['visible']
+                    'visible'           => isset(ProductFetcher::$attributes[$code]['visible'])
+                        ? ProductFetcher::$attributes[$code]['visible']
                         : true,
                 ];
                 if ($position) {

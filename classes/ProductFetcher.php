@@ -53,7 +53,7 @@ if (!defined('_TB_VERSION_')) {
  *
  * @package Tb2vuestorefrontModule
  */
-class Fetcher
+class ProductFetcher
 {
     // Cached category paths
     static $cachedCategoryPaths = [];
@@ -85,7 +85,6 @@ class Fetcher
             'function'      => null,
             'default'       => Meta::ELASTIC_TYPE_TEXT,
             'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
                 Meta::ELASTIC_TYPE_TEXT,
             ],
         ],
@@ -93,8 +92,14 @@ class Fetcher
             'function'      => [__CLASS__, 'getTrimmedRef'],
             'default'       => Meta::ELASTIC_TYPE_TEXT,
             'elastic_types' => [
-                META::ELASTIC_TYPE_KEYWORD,
                 META::ELASTIC_TYPE_TEXT,
+            ],
+        ],
+        'sku'               => [
+            'function'      => [__CLASS__, 'getTrimmedRef'],
+            'default'       => Meta::ELASTIC_TYPE_KEYWORD,
+            'elastic_types' => [
+                META::ELASTIC_TYPE_KEYWORD,
             ],
         ],
         'allow_oosp'              => [
@@ -125,6 +130,14 @@ class Fetcher
             'default'       => Meta::ELASTIC_TYPE_KEYWORD,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_KEYWORD,
+            ],
+        ],
+        'category_ids'            => [
+            'function'      => [__CLASS__, 'getCategoriesIds'],
+            'default'       => Meta::ELASTIC_TYPE_LONG,
+            'elastic_types' => [
+                META::ELASTIC_TYPE_LONG,
+                META::ELASTIC_TYPE_INTEGER,
             ],
         ],
         'category'                => [
@@ -302,7 +315,6 @@ class Fetcher
             'function'      => [__CLASS__, 'getSupplierName'],
             'default'       => Meta::ELASTIC_TYPE_TEXT,
             'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
                 Meta::ELASTIC_TYPE_TEXT,
             ],
         ],
@@ -379,7 +391,6 @@ class Fetcher
             return $elasticProduct;
         }
         $products = [$product];
-        static::addColorListHTML($products);
         $idLangDefault = (int) Configuration::get('PS_LANG_DEFAULT');
 
         $metas = [];
@@ -856,6 +867,21 @@ class Fetcher
     }
 
     /**
+     * Get category ids
+     *
+     * @param Product $product
+     *
+     * @return array
+     * @throws PrestaShopException
+     * @throws \PrestaShopDatabaseException
+     */
+    protected static function getCategoriesIds($product)
+    {
+        return $product->getCategories();
+    }
+
+
+    /**
      * Get category names
      *
      * @param Product $product
@@ -1120,64 +1146,6 @@ class Fetcher
         }
     }
 
-    /**
-     * Renders and adds color list HTML for each product in a list.
-     *
-     * @param Product[] $products
-     *
-     * @since   1.0.0
-     *
-     * @version 1.0.0 Initial version
-     */
-    protected static function addColorListHTML(&$products)
-    {
-        if (!is_array($products) || !count($products) || !file_exists(_PS_THEME_DIR_.'product-list-colors.tpl')) {
-            return;
-        }
-
-        $productsNeedCache = [];
-        foreach ($products as &$product) {
-            $productsNeedCache[] = (int) $product->id;
-        }
-        unset($product);
-
-        try {
-            Tools::enableCache();
-        } catch (PrestaShopException $e) {
-        }
-        foreach ($products as &$product) {
-            $colors = false;
-            if (count($productsNeedCache)) {
-                $colors = static::getAttributesColorList($productsNeedCache, true, $product->elastic_id_lang);
-            }
-            $tpl = Context::getContext()->smarty->createTemplate(
-                \Tb2vuestorefront::tpl('front/product-list-colors.tpl'),
-                Product::getColorsListCacheId($product->id)
-            );
-            if (isset($colors[$product->id])) {
-                $tpl->assign(
-                    [
-                        'id_product'  => $product->id,
-                        'id_lang'     => $product->elastic_id_lang,
-                        'colors_list' => $colors[$product->id],
-                        'link'        => Context::getContext()->link,
-                        'img_col_dir' => _THEME_COL_DIR_,
-                        'col_img_dir' => _PS_COL_IMG_DIR_,
-                    ]
-                );
-            }
-
-            if (!in_array($product->id, $productsNeedCache) || isset($colors[$product->id])) {
-                $product->color_list = $tpl->fetch(
-                    \Tb2vuestorefront::tpl('front/product-list-colors.tpl'),
-                    Product::getColorsListCacheId($product->id)
-                );
-            } else {
-                $product->color_list = '';
-            }
-        }
-        Tools::restoreCacheSettings();
-    }
 
     /**
      * @param array $products
