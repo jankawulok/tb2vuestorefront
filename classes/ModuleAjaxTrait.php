@@ -136,6 +136,7 @@ trait ModuleAjaxTrait
         }
         $idShop = Context::getContext()->shop->id;
         $idLang = Context::getContext()->language->id;
+        $indexVersion = (int)Configuration::get(Tb2vuestorefront::INDEX_VERSION);
         $dateUpdAlias = Tb2vuestorefront::getAlias('date_upd');
         $priceTaxExclAlias = Tb2vuestorefront::getAlias('price_tax_excl');
         $metas = Meta::getAllMetas([$idLang]);
@@ -163,7 +164,7 @@ trait ModuleAjaxTrait
         foreach ($products as &$product) {
             $params['body'][] = [
                 'index' => [
-                    '_index' => "{$index}_{$idShop}_{$product->elastic_id_lang}",
+                    '_index' => "{$index}_{$idShop}_{$product->elastic_id_lang}_{$indexVersion}",
                     '_type'  => 'product',
                     '_id'     => $product->id,
                 ],
@@ -284,17 +285,23 @@ trait ModuleAjaxTrait
     }
 
     /**
-     * Ajax process erase index
+     * Ajax process delete unused indices
      */
     public function ajaxProcessEraseIndex()
     {
+
+    }
+
+    /**
+     * Ajax process create index
+     */
+    public function ajaxProcessCreateIndex()
+    {
         header('Content-Type: application/json; charset=utf-8');
         $idShop = Context::getContext()->shop->id;
-
+        $oldIndexVersion = (int)Configuration::get(Tb2vuestorefront::INDEX_VERSION);
+        Configuration::updateValue(Tb2vuestorefront::INDEX_VERSION, ++$oldIndexVersion);
         try {
-            // Delete the indices first
-            Indexer::eraseIndices(null, [$idShop]);
-
             // Reset the mappings
             Indexer::createMappings(null, [$idShop]);
 
@@ -316,6 +323,35 @@ trait ModuleAjaxTrait
             'total'   => (int) IndexStatus::countProducts(null, $idShop),
         ]));
     }
+
+    /**
+     * Ajax process publish index
+     */
+    public function ajaxProcessPublishIndex()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        $idShop = Context::getContext()->shop->id;
+        $idLang = Context::getContext()->language->id;
+        try {
+            // create index alias
+            Indexer::publishIndex([$idLang], [$idShop]);
+        } catch (Exception $e) {
+        }
+
+        try {
+            Configuration::updateValue(Tb2vuestorefront::CONFIG_UPDATED, false);
+        } catch (\PrestaShopException $e) {
+            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+        }
+
+        // Response status
+        die(json_encode([
+            'success' => true,
+            'indexed' => IndexStatus::getIndexed(null, $idShop),
+            'total'   => (int) IndexStatus::countProducts(null, $idShop),
+        ]));
+    }
+
 
     /**
      * @return void

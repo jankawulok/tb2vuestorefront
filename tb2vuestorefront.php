@@ -39,6 +39,7 @@ class Tb2vuestorefront extends Module
     // Config page
     const INDEX_CHUNK_SIZE = 'ELASTICSEARCH_ICHUNK_SIZE';
     const INDEX_PREFIX = 'ELASTICSEARCH_IPREFIX';
+    const INDEX_VERSION = 'ELASTICSEARCH_IVERSION';
     const STOP_WORDS = 'ELASTICSEARCH_STOP_WORDS';
     const REPLICAS = 'ELASTICSEARCH_REPLICAS';
     const SHARDS = 'ELASTICSEARCH_SHARDS';
@@ -176,6 +177,7 @@ class Tb2vuestorefront extends Module
 
         Configuration::updateGlobalValue(static::INDEX_CHUNK_SIZE, 100);
         Configuration::updateGlobalValue(static::INDEX_PREFIX, 'thirtybees');
+        Configuration::updateGlobalValue(static::INDEX_VERSION, 1);
         Configuration::updateGlobalValue(static::PROXY, true);
         Configuration::updateGlobalValue(static::SHARDS, 3);
         Configuration::updateGlobalValue(static::SERVERS, json_encode([['url' => 'http://localhost:9200', 'read' => true, 'write' => true]]));
@@ -298,6 +300,7 @@ class Tb2vuestorefront extends Module
             static::LOGGING_ENABLED,
             static::INDEX_CHUNK_SIZE,
             static::INDEX_PREFIX,
+            static::INDEX_VERSION,
             static::REPLICAS,
             static::SHARDS,
             static::BLACKLISTED_FIELDS,

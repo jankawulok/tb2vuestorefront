@@ -116,6 +116,108 @@
       request = null;
     }
 
+    function createIndex(self, callback) {
+      self.$store.commit('setSaving', true);
+      var request = new XMLHttpRequest();
+      request.open('GET', window.elasticAjaxUrl + '&ajax=1&action=createIndex', true);
+
+      request.onreadystatechange = function() {
+        if (this.readyState === 4) {
+          var response;
+          try {
+            response = JSON.parse(this.responseText);
+          } catch (e) {
+            response = null;
+          }
+
+          if (this.status >= 200 && this.status < 400) {
+            // Success!
+            if (typeof response !== 'undefined'
+              && response
+              && typeof response.indexed !== 'undefined'
+              && typeof response.total !== 'undefined'
+            ) {
+              self.$store.commit('setIndexingStatus', {
+                indexed: response.indexed,
+                total: response.total
+              });
+            }
+
+            if (typeof callback === 'function') {
+              callback('success', response, this);
+            }
+          } else {
+            // Error :(
+            if (typeof callback === 'function') {
+              callback('error', response, this);
+            }
+          }
+
+          // Finally
+          self.$store.commit('setSaving', false);
+          self.$store.commit('setConfigUpdated', false);
+
+          if (typeof callback === 'function') {
+            callback('complete', response, this);
+          }
+        }
+      };
+
+      request.send(JSON.stringify(self.$store.state.config));
+      request = null;
+    }
+
+    function publishIndex(self, callback) {
+      self.$store.commit('setSaving', true);
+      var request = new XMLHttpRequest();
+      request.open('GET', window.elasticAjaxUrl + '&ajax=1&action=publishIndex', true);
+
+      request.onreadystatechange = function() {
+        if (this.readyState === 4) {
+          var response;
+          try {
+            response = JSON.parse(this.responseText);
+          } catch (e) {
+            response = null;
+          }
+
+          if (this.status >= 200 && this.status < 400) {
+            // Success!
+            if (typeof response !== 'undefined'
+              && response
+              && typeof response.indexed !== 'undefined'
+              && typeof response.total !== 'undefined'
+            ) {
+              self.$store.commit('setIndexingStatus', {
+                indexed: response.indexed,
+                total: response.total
+              });
+            }
+
+            if (typeof callback === 'function') {
+              callback('success', response, this);
+            }
+          } else {
+            // Error :(
+            if (typeof callback === 'function') {
+              callback('error', response, this);
+            }
+          }
+
+          // Finally
+          self.$store.commit('setSaving', false);
+          self.$store.commit('setConfigUpdated', false);
+
+          if (typeof callback === 'function') {
+            callback('complete', response, this);
+          }
+        }
+      };
+
+      request.send(JSON.stringify(self.$store.state.config));
+      request = null;
+    }
+
     function eraseIndex(self, callback) {
       self.$store.commit('setSaving', true);
       var request = new XMLHttpRequest();
@@ -285,6 +387,12 @@
           // Reset the amount of ajax attempts
           ajaxAttempts = 3;
           indexProducts(this);
+        },
+        createIndex: function () {
+          createIndex(this);
+        },
+        publishIndex: function () {
+          publishIndex(this);
         },
         cancelIndexing: function () {
           this.$store.commit('setCancelingIndexing', true);

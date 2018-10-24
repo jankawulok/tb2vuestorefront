@@ -19,6 +19,7 @@
 
 namespace Tb2vuestorefrontModule;
 
+use Tb2vuestorefront;
 use Configuration;
 use Elasticsearch;
 use Exception;
@@ -114,13 +115,18 @@ class Indexer
      *
      * @param int[]|null $idLangs
      * @param int[]|null $idShops
+     * @param int[]|null $indexVersions
      *
      * @throws \PrestaShopException
      */
-    public static function eraseIndices($idLangs = null, $idShops = null)
+    public static function eraseIndices($idLangs = null, $idShops = null, $indexVersions = null)
     {
+        
         $indexPrefix = Configuration::get(Tb2vuestorefront::INDEX_PREFIX);
 
+        if (!is_array($indexVersions) || empty($indexVersions)) {
+            return;
+        }
         if (!is_array($idLangs) || empty($idLangs)) {
             $idLangs = Language::getLanguages(true, false, true);
         }
@@ -135,15 +141,60 @@ class Indexer
         }
         foreach ($idShops as $idShop) {
             foreach ($idLangs as $idLang) {
-                try {
-                    $client->indices()->delete(['index' => "{$indexPrefix}_{$idShop}_{$idLang}"]);
-                } catch (Exception $e) {
-                    $error = json_decode($e->getMessage());
-                    if (isset($error->error->status)) {
-                        if ((int) substr($error->error->status, 0, 1) !== 4) {
-                            die($e->getMessage());
+                foreach ($indexVersions as $indexVersion) {
+                    try {
+                    $client->indices()->delete(['index' => "{$indexPrefix}_{$idShop}_{$idLang}_{$indexVersion}"]);
+                    } catch (Exception $e) {
+                        $error = json_decode($e->getMessage());
+                        if (isset($error->error->status)) {
+                            if ((int) substr($error->error->status, 0, 1) !== 4) {
+                                die($e->getMessage());
+                            }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * Create alias and publish index
+     *
+     * @param int[]|null $idLangs
+     * @param int[]|null $idShops
+     *
+     * @throws \PrestaShopException
+     */
+    public static function publishIndex($idLangs = null, $idShops = null)
+    {
+        $indexPrefix = Configuration::get(Tb2vuestorefront::INDEX_PREFIX);
+        $indexVersion = (int)Configuration::get(Tb2vuestorefront::INDEX_VERSION);
+        $previousIndexVersion = $indexVersion -1;
+        $client = Tb2vuestorefront::getWriteClient();
+        if (!$client) {
+            return;
+        }
+        foreach ($idShops as $idShop) {
+            foreach ($idLangs as $idLang) {
+                try {
+                    $params = [
+                        'index' => "{$indexPrefix}_{$idShop}_{$idLang}_{$previousIndexVersion}",
+                        'name' => "{$indexPrefix}_{$idShop}_{$idLang}"
+                    ];
+                    $client->indices()->deleteAlias($params);
+                } catch (Exception $e) {
+                }
+            }
+        }
+        foreach ($idShops as $idShop) {
+            foreach ($idLangs as $idLang) {
+                try {
+                    $params = [
+                        'index' => "{$indexPrefix}_{$idShop}_{$idLang}_{$indexVersion}",
+                        'name' => "{$indexPrefix}_{$idShop}_{$idLang}"
+                    ];
+                    $client->indices()->putAlias($params);
+                } catch (Exception $e) {
                 }
             }
         }
@@ -160,7 +211,7 @@ class Indexer
     public static function createMappings($idLangs = null, $idShops = null)
     {
         $indexPrefix = Configuration::get(Tb2vuestorefront::INDEX_PREFIX);
-
+        $indexVersion = Configuration::get(Tb2vuestorefront::INDEX_VERSION);
         if (!is_array($idLangs) || empty($idLangs)) {
             $idLangs = Language::getLanguages(true, false, true);
         }
@@ -220,7 +271,7 @@ class Indexer
         foreach ($idShops as $idShop) {
             foreach ($idLangs as $idLang) {
                 $params = [
-                    'index' => "{$indexPrefix}_{$idShop}_{$idLang}",
+                    'index' => "{$indexPrefix}_{$idShop}_{$idLang}_{$indexVersion}",
                     'body'  => [
                         'settings' => [
                             'number_of_shards'   => (int) Configuration::get(Tb2vuestorefront::SHARDS),

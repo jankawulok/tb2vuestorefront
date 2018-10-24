@@ -215,7 +215,8 @@ class IndexStatus extends \ObjectModel
 
         $products = [];
         foreach ($results as &$result) {
-            $product = Fetcher::initProduct($result['id_product'], $result['id_lang']);
+            $product = ProductFetcher::initProduct($result['id_product'], $result['id_lang']);
+
             $product->elastic_id_lang = $result['id_lang'];
             $product->elastic_id_shop = $result['id_shop'];
 

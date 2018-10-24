@@ -43,9 +43,13 @@
       <i class="process-icon-refresh"></i>
       {l s='Index remaining items' mod='tb2vuestorefront'}
     </button>
-    <button v-if="!indexing" class="btn btn-default" @click="eraseIndex" :disabled="saving">
-      <i class="process-icon-eraser"></i>
-      {l s='Clear index' mod='tb2vuestorefront'}
+    <button v-if="!indexing" class="btn btn-default" @click="createIndex" :disabled="saving">
+      <i class="process-icon-new"></i>
+      {l s='Create new index' mod='tb2vuestorefront'}
+    </button>
+    <button v-if="!indexing" class="btn btn-default" @click="publishIndex" :disabled="saving">
+      <i class="process-icon-upload"></i>
+      {l s='Publish index' mod='tb2vuestorefront'}
     </button>
     <button class="btn btn-default"
             v-if="indexing"
