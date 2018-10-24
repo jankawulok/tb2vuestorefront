@@ -15,7 +15,7 @@
  * @copyright 2017-2018 thirty bees
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *}
-{capture name="template"}{include file=ElasticSearch::tpl('admin/vue/options/server-list.html.tpl')}{/capture}
+{capture name="template"}{include file=Tb2vuestorefront::tpl('admin/vue/options/server-list.html.tpl')}{/capture}
 <script type="text/javascript">
   (function () {
     window.VueOptionServerList = {
@@ -36,7 +36,7 @@
           return this.$store.state.config[this.configKey];
         },
         proxied: function proxied() {
-          return !!this.$store.state.config['{ElasticSearch::PROXY}'];
+          return !!this.$store.state.config['{Tb2vuestorefront::PROXY}'];
         }
       },
       methods: {

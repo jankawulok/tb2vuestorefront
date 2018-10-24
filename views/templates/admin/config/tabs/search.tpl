@@ -26,7 +26,7 @@
         <li><code>||FIELDS||</code>: {l s='This is the fields array of fields to search in. An example is' mod='tb2vuestorefront'} <code>["name", "description"]</code>
       </ul>
     </div>
-    <query-json config-key="{ElasticSearch::QUERY_JSON}"></query-json>
+    <query-json config-key="{Tb2vuestorefront::QUERY_JSON}"></query-json>
   </div>
   <div class="panel-footer">
     <button type="submit" class="btn btn-default pull-right ajax-save-btn" :disabled="!canSubmit"

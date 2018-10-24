@@ -15,7 +15,7 @@
  * @copyright 2017-2018 thirty bees
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *}
-{capture name="template"}{include file=ElasticSearch::tpl('admin/vue/options/index-meta-list.html.tpl')}{/capture}
+{capture name="template"}{include file=Tb2vuestorefront::tpl('admin/vue/options/index-meta-list.html.tpl')}{/capture}
 <script type="text/javascript">
   (function () {
     window.VueIndexMetaList = {
