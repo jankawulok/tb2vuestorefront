@@ -16,11 +16,13 @@
  * @copyright 2017-2018 thirty bees
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
-
 use Elasticsearch\Client;
 use Elasticsearch\ClientBuilder;
 use Tb2vuestorefrontModule\IndexStatus;
 use Tb2vuestorefrontModule\Meta;
+use Tb2vuestorefrontModule\ModuleAjaxTrait;
+// use Monolog\Logger;
+// use Monolog\Handler\StreamHandler;
 
 if (!defined('_TB_VERSION_')) {
     return;
@@ -94,6 +96,7 @@ class Tb2vuestorefront extends Module
         'lv' => '_latvian_',
         'no' => '_norwegian_',
         'fa' => '_persian_',
+        'pl' => '_polish_',
         'pt' => '_portuguese_',
         'ro' => '_romanian_',
         'ru' => '_russian_',
@@ -126,7 +129,7 @@ class Tb2vuestorefront extends Module
     public function __construct()
     {
         $this->version = '1.0.0';
-        $this->name = 'elasticsearch';
+        $this->name = 'tb2vuestorefront';
         $this->author = 'thirty bees';
         $this->tab = 'front_office_features';
 
@@ -134,8 +137,8 @@ class Tb2vuestorefront extends Module
 
         parent::__construct();
 
-        $this->displayName = $this->l('Elasticsearch');
-        $this->description = $this->l('Elasticsearch module for thirty bees');
+        $this->displayName = $this->l('Vuestorefront indexer');
+        $this->description = $this->l('Index data to elasticsearch in Vuestorefront format');
 
         $this->controllers = ['cron', 'proxy', 'search'];
     }
@@ -447,221 +450,7 @@ class Tb2vuestorefront extends Module
         }
     }
 
-    /**
-     * Display top hook
-     *
-     * @return string
-     * @throws PrestaShopException
-     */
-    public function hookDisplayTop()
-    {
-        // lodash
-        $this->context->controller->addJS($this->_path.'views/js/lodash-4.17.4.min.js');
 
-        // Vue.js
-        $this->context->controller->addJS($this->_path.'views/js/vue-2.5.11.min.js');
-
-        try {
-            if (Configuration::get(static::INFINITE_SCROLL)) {
-                $this->context->controller->addJS('https://unpkg.com/vue-infinite-loading');
-            }
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-        }
-
-        // Vuex
-        $this->context->controller->addJS($this->_path.'views/js/vuex-2.5.0.min.js');
-
-        // Elasticsearch client
-        $this->context->controller->addJS($this->_path.'views/js/elasticsearch.13.3.1.min.js');
-
-        // Autocomplete CSS
-        if (file_exists(__DIR__.'/views/templates/themes/'.$this->context->shop->theme_directory.'/front.css')) {
-            $this->context->controller->addCSS(__DIR__.'/views/templates/themes/'.$this->context->shop->theme_directory.'/front.css');
-        } else {
-            $this->context->controller->addCSS($this->_path.'views/css/front.css', 'screen');
-        }
-
-        // Calculate the conversion to make before displaying prices
-        /** @var Currency $defaultCurrency */
-        $defaultCurrency = Currency::getCurrencyInstance(Configuration::get(' PS_CURRENCY_DEFAULT'));
-        /** @var Currency $currentCurrency */
-        $currentCurrency = $this->context->currency;
-        $conversion = $defaultCurrency->conversion_rate * $currentCurrency->conversion_rate;
-
-        $taxes = TaxRulesGroup::getAssociatedTaxRatesByIdCountry(Context::getContext()->country->id);
-        if (!Tax::excludeTaxeOption() && (int) Group::getPriceDisplayMethod($this->context->customer->id_default_group) === PS_TAX_EXC) {
-            foreach ($taxes as &$tax) {
-                $tax = 100.000;
-            }
-        }
-
-        $defaultTax = 1.0000;
-        if (isset($taxes[Configuration::get(static::DEFAULT_TAX_RULES_GROUP)])) {
-            $defaultTax = 1 + (float) $taxes[Configuration::get(static::DEFAULT_TAX_RULES_GROUP)] / 100;
-        }
-
-        $this->context->smarty->assign([
-            'idGroup'            => (int) $this->context->customer->id_default_group ?: 1,
-            'defaultTax'         => $defaultTax,
-            'taxes'              => $taxes,
-            'currencyConversion' => (float) $conversion,
-        ]);
-
-        $metas = Meta::getAllMetas([$this->context->language->id]);
-        if (isset($metas[$this->context->language->id])) {
-            $metas = $metas[$this->context->language->id];
-        }
-
-        $aggegrations = [];
-        foreach ($metas as $meta) {
-            if (!$meta['aggregatable']) {
-                continue;
-            }
-
-            // If meta is a slider (display_type = slider/4), then pick the min and max value
-            if ((int) $meta['display_type'] === 4) {
-                $aggegrations["{$meta['alias']}_min"] = [
-                    'min'  => [
-                        'field' => $meta['alias'].'_group_'.(int) Context::getContext()->customer->id_default_group,
-                    ],
-                    'meta' => [
-                        'name'            => $meta['name'],
-                        'code'            => "{$meta['alias']}_min",
-                        'slider_code'     => $meta['alias'],
-                        'slider_agg_code' => $meta['alias'].'_group_'.(int) Context::getContext()->customer->id_default_group,
-                        'position'        => $meta['position'],
-                        'display_type'    => $meta['display_type'],
-                    ],
-                ];
-                $aggegrations["{$meta['alias']}_max"] = [
-                    'max'  => [
-                        'field' => $meta['alias'].'_group_'.(int) Context::getContext()->customer->id_default_group,
-                    ],
-                    'meta' => [
-                        'name'            => $meta['name'],
-                        'code'            => "{$meta['alias']}_max",
-                        'slider_code'     => $meta['alias'],
-                        'slider_agg_code' => $meta['alias'].'_group_'.(int) Context::getContext()->customer->id_default_group,
-                        'position'        => $meta['position'],
-                        'display_type'    => $meta['display_type'],
-                    ],
-                ];
-
-                continue;
-            }
-
-            // Pick the meta value and code (via _agg)
-            $aggs  = [
-                'name' => ['top_hits' => ['size' => 1, '_source' => ['includes' => [$meta['alias']]]]],
-                'code' => ['top_hits' => ['size' => 1, '_source' => ['includes' => ["{$meta['alias']}_agg"]]]],
-            ];
-
-            // If meta is a color (display_type = color/5), then pick the color code as well
-            if ((int) $meta['display_type'] === 5) {
-                $aggs['color_code'] = ['top_hits' => ['size' => 1, '_source' => ['includes' => ["{$meta['alias']}_color_code"]]]];
-            }
-
-            foreach ($aggs as $aggName => &$agg) {
-                $subAgg = $agg;
-                $agg = [
-                    'terms' => [
-                        'field' => $meta['alias'].'_agg',
-                        'size'  => (int) $meta['result_limit'] ?: 10000,
-                    ],
-                    'aggs' => [
-                        $aggName => $subAgg,
-                    ],
-                ];
-            }
-
-            // Name of the aggregation is the display name - the actual code should be retrieved from the top hit
-            $aggegrations[$meta['alias']] = [
-                // Aggregate on the special aggregate field
-
-                // This part is added to get the actual display name and meta code of the filter value
-                'aggs'  => $aggs,
-                'meta' => [
-                    'name'         => $meta['name'],
-                    'code'         => $meta['alias'],
-                    'position'     => $meta['position'],
-                    'display_type' => $meta['display_type'],
-                ],
-            ];
-        }
-
-        // TODO: find the mandatory fields
-        $sources = [];
-        foreach ($metas as $meta) {
-            if (!$meta['enabled'] || !$meta['aggregatable'] && !$meta['searchable'] && !in_array($meta['alias'], [
-                static::getAlias('name'),
-                static::getAlias('price_tax_excl'),
-                static::getAlias('id_tax_rules_group'),
-                static::getAlias('image_link_small'),
-                static::getAlias('image_link_large'),
-            ])) {
-                continue;
-            }
-
-            $sources[] = $meta['code'];
-        }
-
-        try {
-            $autocomplete = Configuration::get(static::AUTOCOMPLETE);
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            $autocomplete = false;
-        }
-        $searchableMetas = Meta::getSearchableMetas();
-        try {
-            $fixedFilter = static::getFixedFilter();
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            $fixedFilter = null;
-        }
-
-        // Find if there is a special filter
-        $this->context->smarty->assign([
-            'autocomplete'  => $autocomplete,
-            'shop'          => $this->context->shop,
-            'language'      => $this->context->language,
-            'aggregations'  => $aggegrations,
-            'fields'        => $searchableMetas,
-            'sources'       => $sources,
-            'metas'         => $metas,
-            'fixedFilter'   => $fixedFilter,
-        ]);
-
-        try {
-            return $this->display(__FILE__, 'displaytop.tpl');
-        } catch (Exception $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            return '';
-        }
-    }
-
-    /**
-     * Display left column
-     *
-     * @return string
-     */
-    public function hookDisplayLeftColumn()
-    {
-        return '<div id="elasticsearch-column-left" v-cloak></div>';
-    }
-
-    /**
-     * Display right column
-     *
-     * @return string
-     */
-    public function hookDisplayRightColumn()
-    {
-        return '<div id="elasticsearch-column-right" v-cloak></div>';
-    }
 
     /**
      * Get read hosts
@@ -767,8 +556,10 @@ class Tb2vuestorefront extends Module
     {
         if (!isset(static::$writeClient)) {
             try {
+                // $logger = ClientBuilder::defaultLogger('elastic.log', Logger::DEBUG);
                 $client = ClientBuilder::create()
                     ->setHosts(static::getWriteHosts())
+                    // ->setLogger($logger)
                     ->build();
 
                 // Check connection, throws an exception if something's wrong
@@ -957,8 +748,6 @@ class Tb2vuestorefront extends Module
                             }
                         }
                     }
-
-                    $product->{$name.'_agg'} = $var;
                 }
 
                 $params['body'][] = $product;

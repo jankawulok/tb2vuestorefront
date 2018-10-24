@@ -19,6 +19,7 @@
 
 namespace Tb2vuestorefrontModule;
 
+use Tb2vuestorefront;
 use Configuration;
 use Context;
 use Db;
@@ -175,41 +176,6 @@ trait ModuleAjaxTrait
                 $product->{"{$priceTaxExclAlias}_{$group}"} = $value;
             }
             unset($product->{$priceTaxExclAlias});
-
-            // Make aggregatable copies of the properties
-            // These need to be `link_rewrite`d to make sure they can fit a the friendly URL
-            foreach (get_object_vars($product) as $name => $var) {
-                // Do not create an aggregatable copy for color codes
-                // Color codes are meta data for aggregations
-                if (substr($name, -11) === '_color_code') {
-                    continue;
-                }
-
-                if (isset($metas[$name]) && in_array($metas[$name]['elastic_type'], ['string', 'text'])) {
-                    if (is_array($var)) {
-                        foreach ($var as &$item) {
-                            try {
-                                $item = Tools::link_rewrite($item);
-                            } catch (\PrestaShopException $e) {
-                                \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-                                continue;
-                            }
-                        }
-                    } else {
-                        try {
-                            $var = Tools::link_rewrite($var);
-                        } catch (\PrestaShopException $e) {
-                            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-                            continue;
-                        }
-                    }
-                }
-
-                $product->{$name.'_agg'} = $var;
-            }
-
             $params['body'][] = $product;
         }
 

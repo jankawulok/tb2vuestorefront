@@ -71,8 +71,8 @@ trait MetaAttributesTrait
         $metas = static::getAllMetas();
 
         $type = 'property';
-            $id = "{$defaultAttributeName}property";
         foreach (ProductFetcher::$attributes as $defaultAttributeName => $defaultAttribute) {
+            $id = "{$defaultAttributeName}";
             $position = isset($metas[$idLang][$id]['position']) ? $metas[$idLang][$id]['position'] : 0;
             $name = [];
             try {
@@ -145,7 +145,7 @@ trait MetaAttributesTrait
         try {
             foreach (\Feature::getFeatures($idLang) as $feature) {
                 $id = Tools::link_rewrite($feature['name']);
-                $id = "{$id}feature";
+                $id = "{$id}";
                 $position = isset($metas[$idLang][$id]['position']) ? $metas[$idLang][$id]['position'] : 0;
                 $name = [];
                 foreach (Language::getLanguages(true, false, true) as $language) {

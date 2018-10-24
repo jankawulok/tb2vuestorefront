@@ -226,35 +226,10 @@ class Indexer
         }
         $properties = [];
         foreach ($searchableMetas as $meta) {
-            // Searchable fields can have both text and keyword fields
-            // Use code here because we need the original status that was assigned to the prop
-            if (substr($meta['code'], -11) === '_color_code') {
-                $properties[$meta['alias']] = [
-                    'type' => 'keyword',
-                ];
-            } else {
-                $properties[$meta['alias']] = [
-                    'type' => $meta['elastic_type'],
-                ];
-            }
+            $properties[$meta['alias']] = [
+                'type' => $meta['elastic_type'],
+            ];
 
-            // Filterable fields for facets require keyword fields instead of text fields
-            // We turn them all into keywords, because they will have to become part of the friendly URL
-            if (in_array($meta['elastic_type'], ['string', 'text'])) {
-                $properties["{$meta['alias']}_agg"] = [
-                    'type' => 'keyword',
-                ];
-            } else {
-                $properties["{$meta['alias']}_agg"] = [
-                    'type' => $meta['elastic_type'],
-                ];
-            }
-
-            if ((int) $meta['display_type'] === Meta::DISPLAY_TYPE_COLORS) {
-                $properties["{$meta['alias']}_color_code"] = [
-                    'type' => 'keyword',
-                ];
-            }
 
             // Force MySQL DATETIME format for dates, we can always check if there's a demand for other types
             if ($meta['elastic_type'] === 'date') {
@@ -262,7 +237,6 @@ class Indexer
                 $properties["{$meta['alias']}_agg"]['format'] = 'yyyy-MM-dd HH:mm:ss';
             }
         }
-
         // Push the mappings to Elasticsearch
         $client = Tb2vuestorefront::getWriteClient();
         if (!$client) {
