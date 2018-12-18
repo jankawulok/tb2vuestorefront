@@ -18,9 +18,12 @@
  */
 use Elasticsearch\Client;
 use Elasticsearch\ClientBuilder;
-use Tb2vuestorefrontModule\IndexStatus;
-use Tb2vuestorefrontModule\Meta;
-use Tb2vuestorefrontModule\ModuleAjaxTrait;
+use Tb2VueStorefrontModule\IndexStatus;
+use Tb2VueStorefrontModule\EntityType as VSindex;
+use Tb2VueStorefrontModule\Meta;
+use Tb2VueStorefrontModule\Fetcher;
+use Tb2VueStorefrontModule\EntityType as ElasticIndex;
+use Tb2VueStorefrontModule\ModuleAjaxTrait;
 // use Monolog\Logger;
 // use Monolog\Handler\StreamHandler;
 
@@ -36,8 +39,7 @@ require_once __DIR__.'/vendor/autoload.php';
 class Tb2vuestorefront extends Module
 {
     // Include ajax functions
-    use \Tb2vuestorefrontModule\ModuleAjaxTrait;
-
+    use \Tb2VueStorefrontModule\ModuleAjaxTrait;
     // Config page
     const INDEX_CHUNK_SIZE = 'ELASTICSEARCH_ICHUNK_SIZE';
     const INDEX_PREFIX = 'ELASTICSEARCH_IPREFIX';
@@ -69,6 +71,7 @@ class Tb2vuestorefront extends Module
 
     // Generic
     const CONFIG_UPDATED = 'ELASTICSEARCH_CONFIG_UPDATED';
+
 
     /** @var array $stopWordLangs */
     public static $stopWordLangs = [
@@ -116,9 +119,24 @@ class Tb2vuestorefront extends Module
      * @var array
      */
     protected $hooks = [
-        'displayTop',
-        'displayLeftColumn',
-        'displayRightColumn',
+        'actionObjectProductAddAfter',
+        'actionObjectProductDeleteAfter',
+        'actionObjectProductUpdateAfter',
+    ];
+
+    /**
+     * Entity Types
+     *
+     * @var array
+     */
+    protected $entityTypes = [
+        ['Tb2VueStorefrontModule\\AttributeFetcher', 'attribute'],
+        ['Tb2VueStorefrontModule\\CategoryFetcher', 'category'],
+        ['Tb2VueStorefrontModule\\CmsCategoryFetcher', 'cmscategory'],
+        ['Tb2VueStorefrontModule\\CmsFetcher', 'cms'],
+        ['Tb2VueStorefrontModule\\ManufacturerFetcher', 'manufacturer'],
+        ['Tb2VueStorefrontModule\\ProductFetcher', 'product'],
+        ['Tb2VueStorefrontModule\\TaxRuleFetcher', 'taxrule'],
     ];
 
     /**
@@ -141,6 +159,7 @@ class Tb2vuestorefront extends Module
         $this->description = $this->l('Index data to elasticsearch in Vuestorefront format');
 
         $this->controllers = ['cron', 'proxy', 'search'];
+
     }
 
     /**
@@ -148,17 +167,18 @@ class Tb2vuestorefront extends Module
      *
      * @return bool
      * @throws PrestaShopException
+     * @throws Adapter_Exception
      */
     public function install()
     {
-        if (version_compare(phpversion(), '5.6', '<')) {
-            $this->context->controller->errors[] = sprintf($this->l('The Elasticsearch module requires at least PHP version 5.6. Your current version is: %s'), phpversion());
+        if (version_compare(phpversion(), '7', '<')) {
+            $this->context->controller->errors[] = sprintf($this->l('This module requires at least PHP version 7. Your current version is: %s'), phpversion());
 
             return false;
         }
 
         if (!extension_loaded('curl')) {
-            $this->context->controller->errors[] = $this->l('The Elasticsearch module requires the cURL extension to be installed and available. Ask your web host for more info on how to enable it.');
+            $this->context->controller->errors[] = $this->l('Module requires the cURL extension to be installed and available. Ask your web host for more info on how to enable it.');
         }
 
         try {
@@ -171,10 +191,22 @@ class Tb2vuestorefront extends Module
 
         $this->installDB();
 
+
+        foreach ($this->entityTypes as $entityType) {
+            try {
+                foreach (Shop::getShops() as $shop) {
+                    static::registerIndex($entityType[0], $entityType[1], $shop['id_shop']);
+                }
+            } catch (PrestaShopException $e) {
+                \Tools::displayError($e->getMessage());
+            }
+        }
+
         foreach ($this->hooks as $hook) {
             try {
                 $this->registerHook($hook);
             } catch (PrestaShopException $e) {
+                \Tools::displayError($e->getMessage());
             }
         }
 
@@ -228,65 +260,6 @@ class Tb2vuestorefront extends Module
             }
         }
 
-        $defaultMetas = json_decode(file_get_contents(__DIR__.'/data/defaultmetas.json'), true);
-        $attributes = Meta::getAllProperties((int) Configuration::get('PS_LANG_DEFAULT'));
-        $metaInserts = [];
-        $metaLangInserts = [];
-        $langs = Language::getLanguages(true);
-        foreach ($langs as &$lang) {
-            if (!isset($defaultMetas['name'][$lang['iso_code']])) {
-                // Use the default language
-                $lang['iso_code'] = 'en';
-            }
-        }
-        unset($lang);
-
-        $i = 1;
-        foreach ($attributes as $attribute) {
-            $metaInserts[] = [
-                bqSQL(Meta::$definition['primary']) => $i,
-                'alias'                             => bqSQL($attribute->code.$attribute->meta_type),
-                'code'                              => bqSQL($attribute->code),
-                'enabled'                           => !in_array($attribute->code, ['sales', 'pageviews']),
-                'meta_type'                         => bqSQL($attribute->meta_type),
-                'elastic_type'                      => bqSQL($attribute->elastic_type),
-                'searchable'                        => in_array($attribute->code, ['name', 'reference', 'manufacturer']),
-                'weight'                            => 1,
-                'position'                          => $i,
-                'aggregatable'                      => in_array($attribute->code, ['category', 'manufacturer']),
-                'operator'                          => (float) $attribute->weight,
-                'display_type'                      => bqSQL($attribute->weight),
-                'result_limit'                      => 0,
-            ];
-
-            foreach ($langs as $lang) {
-                $metaLangInserts[] = [
-                    bqSQL(Meta::$definition['primary']) => $i,
-                    'id_lang'                           => (int) $lang['id_lang'],
-                    'name'                              => isset($defaultMetas[$attribute->code][$lang['iso_code']])
-                        ? $defaultMetas[$attribute->code][$lang['iso_code']]
-                        : $attribute->code,
-                ];
-            }
-            $i++;
-        }
-        try {
-            Db::getInstance()->insert(bqSQL(Meta::$definition['table']), $metaInserts);
-        } catch (PrestaShopException $e) {
-            $this->context->controller->errors[] = "Elasticsearch module database error: {$e->getMessage()}";
-            $this->uninstall();
-
-            return false;
-        }
-        try {
-            Db::getInstance()->insert(bqSQL(Meta::$definition['table']).'_lang', $metaLangInserts);
-        } catch (PrestaShopException $e) {
-            $this->context->controller->errors[] = "Elasticsearch module database error: {$e->getMessage()}";
-            $this->uninstall();
-
-            return false;
-        }
-
         return true;
     }
 
@@ -322,6 +295,11 @@ class Tb2vuestorefront extends Module
 
         try {
             Db::getInstance()->execute('DROP TABLE `'._DB_PREFIX_.'tb2vuestorefront_index_status`');
+        } catch (PrestaShopException $e) {
+            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+        }
+        try {
+            Db::getInstance()->execute('DROP TABLE `'._DB_PREFIX_.'tb2vuestorefront_entity_type`');
         } catch (PrestaShopException $e) {
             Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
         }
@@ -396,9 +374,9 @@ class Tb2vuestorefront extends Module
             'initialTab'     => 'config',
             'status'         => [
                 'indexed' => IndexStatus::getIndexed(null, $this->context->shop->id),
-                'total'   => (int) IndexStatus::countProducts(null, $this->context->shop->id),
+                'total'   => (int) \Tb2VueStorefrontModule\IndexStatus::countObjects(null, $this->context->shop->id),
             ],
-            'totalProducts'  => IndexStatus::countProducts($this->context->language->id, $this->context->shop->id),
+            'totalProducts'  => \Tb2VueStorefrontModule\IndexStatus::countObjects($this->context->language->id, $this->context->shop->id),
             'languages'      => $languages,
             'tabGroups' => [
                 [
@@ -415,26 +393,19 @@ class Tb2vuestorefront extends Module
                 ],
                 [
                     [
-                        'name' => 'Indexing',
+                        'name' => 'Indices',
+                        'key'  => 'index',
+                        'icon' => 'table',
+                    ],
+                    [
+                        'name' => 'Attribute mapping',
                         'key'  => 'indexing',
                         'icon' => 'sort',
                     ],
                     [
-                        'name' => 'Search',
-                        'key'  => 'search',
-                        'icon' => 'search',
-                    ],
-                    [
-                        'name' => 'Filter',
+                        'name' => 'Default Filter',
                         'key'  => 'filter',
                         'icon' => 'filter',
-                    ],
-                ],
-                [
-                    [
-                        'name' => 'Display',
-                        'key'  => 'display',
-                        'icon' => 'desktop',
                     ],
                 ],
             ],
@@ -803,6 +774,141 @@ class Tb2vuestorefront extends Module
         exit(0);
     }
 
+
+    /**
+     * Index remaining products
+     *
+     * @param int $chunks
+     * @param int $idShop
+     */
+    public function cronProcessRemaining($chunks, $idShop)
+    {
+        /** @var Client $client */
+        $client = static::getWriteClient();
+        if (!$client) {
+            die(json_encode([
+                'success' => false,
+            ]));
+        }
+        $amount = (int) (Configuration::get(static::INDEX_CHUNK_SIZE) ?: 100);
+        if (!$amount) {
+            $amount = 100;
+        }
+        $index = Configuration::get(static::INDEX_PREFIX);
+
+        while ($chunks > 0) {
+            // Check which products are available for indexing
+            $products = IndexStatus::getProductsToIndex($amount, 0, null, $idShop);
+
+            if (empty($products)) {
+                // Nothing to index -- cron job done
+                exit(0);
+            }
+
+            $params = [
+                'body' => [],
+            ];
+            foreach ($products as &$product) {
+                $params['body'][] = [
+                    'index' => [
+                        '_index' => "{$index}_{$idShop}_{$product->elastic_id_lang}",
+                        '_type'  => 'product',
+                        '_id'     => $product->id,
+                    ],
+                ];
+
+                // Process prices for customer groups
+                foreach ($product->{$priceTaxExclAlias} as $group => $value) {
+                    $product->{"{$priceTaxExclAlias}_{$group}"} = $value;
+                }
+                unset($product->{$priceTaxExclAlias});
+
+                // Make aggregatable copies of the properties
+                // These need to be `link_rewrite`d to make sure they can fit a the friendly URL
+                foreach (get_object_vars($product) as $name => $var) {
+                    // Do not create an aggregatable copy for color codes
+                    // Color codes are meta data for aggregations
+                    if (substr($name, -11) === '_color_code') {
+                        continue;
+                    }
+
+                    if (isset($metas[$name]) && in_array($metas[$name]['elastic_type'], ['string', 'text'])) {
+                        if (is_array($var)) {
+                            foreach ($var as &$item) {
+                                try {
+                                    $item = Tools::link_rewrite($item);
+                                } catch (\PrestaShopException $e) {
+                                    \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+                                    continue;
+                                }
+                            }
+                        } else {
+                            try {
+                                $var = Tools::link_rewrite($var);
+                            } catch (\PrestaShopException $e) {
+                                \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                $params['body'][] = $product;
+            }
+
+            // Push to Elasticsearch
+            try {
+                $results = $client->bulk($params);
+            } catch (Exception $exception) {
+                exit(1);
+            }
+            $failed = [];
+            foreach ($results['items'] as $result) {
+                if ((int) substr($result['index']['status'], 0, 1) !== 2) {
+                    preg_match('/(?P<index>[a-zA-Z]+)\_(?P<id_shop>\d+)\_(?P<id_lang>\d+)/', $result['index']['_index'], $details);
+                    $failed[] = [
+                        'id_lang'    => (int) $details['id_lang'],
+                        'id_shop'    => (int) $details['id_shop'],
+                        'id_product' => (int) $result['index']['_id'],
+                        'error'      => isset($result['index']['error']['reason']) ? $result['index']['error']['reason'].(isset($result['index']['error']['caused_by']['reason']) ? ' '.$result['index']['error']['caused_by']['reason'] : '') : 'Unknown error',
+                    ];
+                }
+            }
+            if (!empty($failed)) {
+                foreach ($failed as $failure) {
+                    foreach ($products as $index => $product) {
+                        if ((int) $product->id === (int) $failure['id_product']
+                            && (int) $product->elastic_id_shop === (int) $failure['id_shop']
+                            && (int) $product->elastic_id_lang === (int) $failure['id_lang']
+                        ) {
+                            Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."tb2vuestorefront_index_status` (`id_product`,`id_lang`,`id_shop`, `error`) VALUES ('{$failed['id_product']}', '{$failed['id_lang']}', '{$failed['id_shop']}', '{$failed['error']}') ON DUPLICATE KEY UPDATE `error` = VALUES(`error`)");
+
+                            unset($products[$index]);
+                        }
+                    }
+                }
+            }
+
+            // Insert index status into database
+            $dateUpdAlias = static::getAlias('date_upd');
+            $values = '';
+            foreach ($products as &$product) {
+                $values .= "('{$product->id}', '{$product->elastic_id_lang}', '{$this->context->shop->id}', '{$product->{$dateUpdAlias}}', ''),";
+            }
+            $values = rtrim($values, ',');
+            if ($values) {
+                Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."tb2vuestorefront_index_status` (`id_product`,`id_lang`,`id_shop`, `date_upd`, `error`) VALUES $values ON DUPLICATE KEY UPDATE `date_upd` = VALUES(`date_upd`), `error` = ''");
+            }
+
+            $chunks--;
+        }
+
+        exit(0);
+    }
+
+
     /**
      * Install the database tables for this module
      *
@@ -931,7 +1037,7 @@ class Tb2vuestorefront extends Module
                     ];
                 }
 
-                $categoryPath = \Tb2vuestorefrontModule\ProductFetcher::getCategoryPath($category->id, $idLang);
+                $categoryPath = \Tb2VueStorefrontModule\ProductFetcher::getCategoryPath($category->id, $idLang);
 
                 return [
                     'aggregationCode' => static::getAlias('categories'),
@@ -1194,5 +1300,56 @@ class Tb2vuestorefront extends Module
         }
 
         return array_combine(array_column($results, 'code'), array_column($results, 'alias'));
+    }
+
+
+    /**
+     * @param string $className
+     * @param int $idShop
+     * @return bool
+     * @throws Adapter_Exception
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    public static function addIndex($className, $idShop)
+    {
+        $index = new \Tb2VueStorefrontModule\EntityType();
+        $index->class_name = $className;
+        $index->id_shop = $idShop;
+        return $index->add();
+    }
+
+    public static function deleteIndexByName($className)
+    {
+
+    }
+
+    /**
+     * @param string $className
+     * @param string $indexName
+     * @param int idShop
+     * @return bool
+     */
+    public static function registerIndex($className, $indexName, $idShop)
+    {
+        return ElasticIndex::addEntityType($className, $indexName, $idShop);
+    }
+
+
+    /**
+     * @param $className
+     * @param $idShop
+     * @return bool
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    public static function unregisterIndex($className, $idShop)
+    {
+        return ElasticIndex::deleteEntityType($className, $idShop);
+    }
+
+    public static function indexObject($className, $entityId)
+    {
+
     }
 }

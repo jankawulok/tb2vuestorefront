@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace Tb2vuestorefrontModule;
+namespace Tb2VueStorefrontModule;
 
 use Context;
 use Db;
@@ -25,6 +25,7 @@ use DbQuery;
 use Language;
 use ObjectModel;
 use ReflectionClass;
+
 
 if (!defined('_TB_VERSION_')) {
     exit;
@@ -260,8 +261,8 @@ class Meta extends ObjectModel
         // At the moment only checkboxes are supported
         return [
             static::DISPLAY_TYPE_CHECKBOX => 'Checkbox',
-//            static::DISPLAY_TYPE_RADIO    => 'Radio buttons',
-//            static::DISPLAY_TYPE_LIST     => 'Dropdown',
+            static::DISPLAY_TYPE_RADIO    => 'Radio buttons',
+            static::DISPLAY_TYPE_LIST     => 'Dropdown',
             static::DISPLAY_TYPE_SLIDER   => 'Slider',
             static::DISPLAY_TYPE_COLORS   => 'Colors',
         ];

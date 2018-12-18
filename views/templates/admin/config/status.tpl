@@ -41,8 +41,9 @@
     </button>
     <button v-if="!indexing" class="btn btn-default" @click="startIndexing" :disabled="saving">
       <i class="process-icon-refresh"></i>
-      {l s='Index remaining items' mod='tb2vuestorefront'}
+      {l s='Index remaining products' mod='tb2vuestorefront'}
     </button>
+
     <button v-if="!indexing" class="btn btn-default" @click="createIndex" :disabled="saving">
       <i class="process-icon-new"></i>
       {l s='Create new index' mod='tb2vuestorefront'}

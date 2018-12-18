@@ -12,16 +12,18 @@
  * obtain it through the world-wide-web, please send an email
  * to contact@thirtybees.com so we can send you a copy immediately.
  *
- * @author    thirty bees <contact@thirtybees.com>
+ * @author    thirty bees <contact@thirtybee
+ * s.com>
  * @copyright 2017-2018 thirty bees
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace Tb2vuestorefrontModule;
+namespace Tb2VueStorefrontModule;
 
 use AttributeGroup;
 use Category;
 use Configuration;
+use Collection;
 use Group;
 use Context;
 use Customer;
@@ -33,12 +35,14 @@ use Link;
 use Logger;
 use Manufacturer;
 use Page;
+use phpDocumentor\Reflection\Types\Integer;
 use PrestaShopException;
 use Product;
 use ProductSale;
 use Shop;
 use stdClass;
 use Tools;
+use StockAvailable;
 
 if (!defined('_TB_VERSION_')) {
     return;
@@ -53,8 +57,12 @@ if (!defined('_TB_VERSION_')) {
  *
  * @package Tb2vuestorefrontModule
  */
-class ProductFetcher
+class ProductFetcher extends Fetcher
 {
+
+    public static $className = 'Product';
+    public static $indexName = 'product';
+
     // Cached category paths
     static $cachedCategoryPaths = [];
 
@@ -66,200 +74,204 @@ class ProductFetcher
      *
      * Defaults:
      * - function: null
-     * - default: 'text'
-     * - elastic_types: all
-     * - visible: true
+     * - type: Meta::ELASTIC_TYPE_TEXT
      *
      * @var array $attributes
      */
     public static $attributes = [
-        'active'                  => [
-            'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_BOOLEAN,
-            ],
-            'visible'       => false,
-        ],
-        'name'                    => [
-            'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_TEXT,
-            ],
-        ],
-        'reference'               => [
-            'function'      => [__CLASS__, 'getTrimmedRef'],
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                META::ELASTIC_TYPE_TEXT,
-            ],
-        ],
         'sku'               => [
-            'function'      => [__CLASS__, 'getTrimmedRef'],
-            'default'       => Meta::ELASTIC_TYPE_KEYWORD,
+            'function'      => [__CLASS__, 'getSku'],
+            'type'          => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
+        'name'              => [
+            'function'      => null,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
+        ],
+        'attribute_set_id'  => [
+            'static'        => 0,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
+        ],
+        'price'             => [
+            'function'      => [__CLASS__, 'getPriceTaxExcl'],
+            'type'          => Meta::ELASTIC_TYPE_FLOAT,
             'elastic_types' => [
-                META::ELASTIC_TYPE_KEYWORD,
+                Meta::ELASTIC_TYPE_FLOAT,
             ],
         ],
-        'allow_oosp'              => [
-            'function'      => [__CLASS__, 'getAllowOosp'],
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_BOOLEAN,
-            ],
-            'visible'       => false,
+        'status'            => [
+            'function'      => [__CLASS__, 'getStatus'],
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
-        'available_for_order'     => [
-            'function'      => [__CLASS__, 'getAvailableForOrder'],
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_BOOLEAN,
-            ],
-            'visible'       => false,
+        'visibility'        => [
+            'function'      => [__CLASS__, 'getVisibility'],
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
-        'available_now'           => [
-            'function'      => [__CLASS__, 'getAvailableNow'],
-            'default'       => Meta::ELASTIC_TYPE_KEYWORD,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-            ],
+        'type_id'           => [
+            'function'      => [__CLASS__, 'getTypeId'],
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
         ],
-        'available_later'           => [
-            'function'      => [__CLASS__, 'getAvailableLater'],
-            'default'       => Meta::ELASTIC_TYPE_KEYWORD,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-            ],
+        'created_at'        => [
+            'function'      => [__CLASS__, 'getCreatedAt'],
+            'type'          => Meta::ELASTIC_TYPE_DATE,
+        ],
+        'updated_at'        => [
+            'function'      => [__CLASS__, 'getUpdatedAt'],
+            'type'          => Meta::ELASTIC_TYPE_DATE,
+        ],
+        'weight'            => [
+            'function'      => null,
+            'type'          => Meta::ELASTIC_TYPE_FLOAT,
+        ],
+        'weight'            => [
+            'function'      => null,
+            'type'          => Meta::ELASTIC_TYPE_FLOAT,
+        ],
+        'tier_prices'       => [
+            'function'      => [__CLASS__, 'getTierPrices'],
+        ],
+        'required_options'       => [
+            'function'      => [__CLASS__, 'getRequiredOptions'],
+        ],
+        'has_options'       => [
+            'function'      => [__CLASS__, 'getHasOptions'],
+            'type'          => Meta::ELASTIC_TYPE_BOOLEAN,
+        ],
+        'tax_class_id'      => [
+            'function'      => [__CLASS__, 'getTaxClassId'],
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'category_ids'            => [
             'function'      => [__CLASS__, 'getCategoriesIds'],
-            'default'       => Meta::ELASTIC_TYPE_LONG,
-            'elastic_types' => [
-                META::ELASTIC_TYPE_LONG,
-                META::ELASTIC_TYPE_INTEGER,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
+        ],
+        'category'          => [
+            'function'      => [__CLASS__, 'getCategories'],
+            'children'      => [
+                'category_id'   => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'is_parent'     => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'is_virtual'    => ['type' => Meta::ELASTIC_TYPE_TEXT],
+                'name'          => ['type' => Meta::ELASTIC_TYPE_TEXT],
+                'position'      => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+
             ],
         ],
-        'category'                => [
-            'function'      => [__CLASS__, 'getCategoryName'],
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-                Meta::ELASTIC_TYPE_TEXT,
-            ],
+
+        'reference'         => [
         ],
-        'categories'              => [
-            'function'      => [__CLASS__, 'getCategoriesNames'],
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-                Meta::ELASTIC_TYPE_TEXT,
-            ],
-        ],
-        'categories_without_path' => [
-            'function'      => [__CLASS__, 'getCategoriesNamesWithoutPath'],
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-                Meta::ELASTIC_TYPE_TEXT,
-            ],
-        ],
-        'color_list'              => [
-            'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_KEYWORD,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-            ],
-            'visible'       => false,
-        ],
-        'condition'               => [
-            'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_KEYWORD,
-            'visible'       => false,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-            ],
-        ],
-        'customization_required'  => [
-            'function'      => [__CLASS__, 'getCustomizationRequired'],
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_BOOLEAN,
-            ],
-            'visible'       => false,
-        ],
-        'date_add'                => [
-            'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_DATE,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_DATE,
-            ],
-        ],
-        'date_upd'                => [
-            'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_DATE,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_DATE,
-            ],
-        ],
-        'description'             => [
-            'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-                Meta::ELASTIC_TYPE_TEXT,
-            ],
-        ],
-        'description_short'       => [
-            'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-                Meta::ELASTIC_TYPE_TEXT,
-            ],
-        ],
-        'ean13'                   => [
+        'ean13'             => [
             'function'      => [__CLASS__, 'getEan'],
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-                Meta::ELASTIC_TYPE_TEXT,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
+        ],
+        'has_options'       => [
+            'static'        => false,
+            'type'          => Meta::ELASTIC_TYPE_BOOLEAN,
+        ],
+        'required_options'  => [
+            'static'        => 0,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
+        ],
+        'is_salable'        => [
+            'function'      => [__CLASS__, 'getAvailableForOrder'],
+            'type'          => Meta::ELASTIC_TYPE_BOOLEAN,
+        ],
+
+        'is_active'         => [
+            'function'      => [__CLASS__, 'getIsActive'],
+            'type'          => Meta::ELASTIC_TYPE_BOOLEAN,
+        ],
+        'request_path'      => [
+            'function'      => [__CLASS__, 'getRequestPath'],
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
+        ],
+
+        'description'       => [
+            'function'      => null,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
+        ],
+        'short_description' => [
+            'function'      => [__CLASS__, 'getShortDescription'],
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
+        ],
+        'stock'             => [
+            'function'      => [__CLASS__, 'getStock'],
+            'children'    => [
+                'item_id'     => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'product_id'  => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'stock_id'    => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'qty'         => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'is_in_stock' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'is_qty_decimal' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'show_default_notification_message' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'use_config_min_qty' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'min_qty' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'use_config_min_sale_qty' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'min_sale_qty' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'use_config_max_sale_qty' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'max_sale_qty' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'use_config_backorders' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'backorders' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'use_config_notify_stock_qty' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'notify_stock_qty' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'use_config_qty_increments' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'qty_increments' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'use_config_enable_qty_inc' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'enable_qty_increments' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'use_config_manage_stock' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'manage_stock' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'low_stock_date' => ['type' => Meta::ELASTIC_TYPE_DATE],
+                'is_decimal_divided' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
+                'stock_status_changed_auto' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
             ],
         ],
-        'image_link_large'        => [
-            'function'      => [__CLASS__, 'generateImageLinkLarge'],
-            'default'       => Meta::ELASTIC_TYPE_KEYWORD,
-            'visible'       => false,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
+        'media_gallery' => [
+            'function'  => [__CLASS__, 'getMediaGallery'],
+            'children'  => [
+                'image' => ['type' => Meta::ELASTIC_TYPE_TEXT],
+                'pos'   => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'lab'   => ['type' => Meta::ELASTIC_TYPE_TEXT],
+                'typ'   => ['type' => Meta::ELASTIC_TYPE_TEXT],
             ],
         ],
-        'image_link_small'        => [
-            'function'      => [__CLASS__, 'generateImageLinkSmall'],
-            'default'       => Meta::ELASTIC_TYPE_KEYWORD,
-            'visible'       => false,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-            ],
+        'image'   => [
+            'function'              => [__CLASS__, 'getImage'],
+            'type'                  => Meta::ELASTIC_TYPE_TEXT,
         ],
-        'in_stock'                => [
-            'function'      => [__CLASS__, 'getInStock'],
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_BOOLEAN,
-            ],
-            'visible'       => false,
+        'categories_without_path'   => [
+            'function'              => [__CLASS__, 'getCategoriesNamesWithoutPath'],
+            'type'                  => Meta::ELASTIC_TYPE_TEXT,
+        ],
+        'condition'                 => [
+            'function'              => null,
+            'type'                  => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
+        'customization_required'    => [
+            'function'              => [__CLASS__, 'getCustomizationRequired'],
+            'type'                  => Meta::ELASTIC_TYPE_BOOLEAN,
+        ],
+        'date_add'                  => [
+            'function'              => null,
+            'type'                  => Meta::ELASTIC_TYPE_DATE,
+        ],
+        'date_upd'                  => [
+            'function'              => null,
+            'type'                  => Meta::ELASTIC_TYPE_DATE,
+        ],
+
+        'in_stock'                  => [
+            'function'              => [__CLASS__, 'getInStock'],
+            'type'                  => Meta::ELASTIC_TYPE_BOOLEAN,
+            'visible'               => false,
         ],
         'is_virtual'              => [
             'function'      => [__CLASS__, 'getIsVirtual'],
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_BOOLEAN,
             ],
         ],
         'link'                    => [
             'function'      => [__CLASS__, 'generateLinkRewrite'],
-            'default'       => Meta::ELASTIC_TYPE_KEYWORD,
+            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
             'visible'       => false,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_KEYWORD,
@@ -267,7 +279,7 @@ class ProductFetcher
         ],
         'id_tax_rules_group'      => [
             'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'       => Meta::ELASTIC_TYPE_INTEGER,
             'visible'       => false,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_INTEGER,
@@ -275,7 +287,7 @@ class ProductFetcher
         ],
         'manufacturer'            => [
             'function'      => [__CLASS__, 'getManufacturerName'],
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
+            'type'       => Meta::ELASTIC_TYPE_TEXT,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_KEYWORD,
                 Meta::ELASTIC_TYPE_TEXT,
@@ -283,7 +295,7 @@ class ProductFetcher
         ],
         'minimal_quantity'        => [
             'function'      => [__CLASS__, 'getMinimalQuantity'],
-            'default'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'       => Meta::ELASTIC_TYPE_INTEGER,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_INTEGER,
             ],
@@ -291,50 +303,36 @@ class ProductFetcher
         ],
         'new'                     => [
             'function'      => [__CLASS__, 'getNew'],
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_BOOLEAN,
             ],
         ],
-        'price_tax_excl'          => [
-            'function'      => [__CLASS__, 'getPriceTaxExcl'],
-            'default'       => Meta::ELASTIC_TYPE_FLOAT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_FLOAT,
-            ],
-        ],
         'show_price'              => [
             'function'      => [__CLASS__, 'getShowPrice'],
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_BOOLEAN,
             ],
             'visible'       => false,
         ],
-        'supplier'                => [
-            'function'      => [__CLASS__, 'getSupplierName'],
-            'default'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_TEXT,
-            ],
-        ],
         'on_sale'                 => [
             'function'      => [__CLASS__, 'getOnSale'],
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_BOOLEAN,
             ],
         ],
         'online_only'             => [
             'function'      => [__CLASS__, 'getOnlineOnly'],
-            'default'       => Meta::ELASTIC_TYPE_BOOLEAN,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_BOOLEAN,
             ],
         ],
         'ordered_qty'             => [
             'function'      => [__CLASS__, 'getOrderedQty'],
-            'default'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'       => Meta::ELASTIC_TYPE_INTEGER,
             'visible'       => false,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_INTEGER,
@@ -342,7 +340,7 @@ class ProductFetcher
         ],
         'stock_qty'               => [
             'function'      => [__CLASS__, 'getStockQty'],
-            'default'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'       => Meta::ELASTIC_TYPE_INTEGER,
             'visible'       => false,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_INTEGER,
@@ -350,7 +348,7 @@ class ProductFetcher
         ],
         'weight'                  => [
             'function'      => null,
-            'default'       => Meta::ELASTIC_TYPE_FLOAT,
+            'type'       => Meta::ELASTIC_TYPE_FLOAT,
             'visible'       => false,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_FLOAT,
@@ -358,19 +356,42 @@ class ProductFetcher
         ],
         'pageviews'               => [
             'function'      => [__CLASS__, 'getPageViews'],
-            'default'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'       => Meta::ELASTIC_TYPE_INTEGER,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_INTEGER,
             ],
         ],
         'sales'                   => [
             'function'      => [__CLASS__, 'getSales'],
-            'default'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'       => Meta::ELASTIC_TYPE_INTEGER,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_INTEGER,
             ],
         ],
+        'meta'           => [
+            'function'      => [__CLASS__, 'getMeta'],
+        ],
     ];
+
+    /**
+     * This function generates mapping for collection
+     *
+     * @return array
+     * @throws \PrestaShopException
+     */
+    public static function generateMappings($idLang, $idShop)
+    {
+        $mapping = parent::generateMappings($idLang, $idShop);
+        $attributes =  (new Collection('AttributeGroup', $idLang))
+        ->getResults();
+        foreach ($attributes as &$result) {
+            $mapping["properties"][$result->name] = [
+                'type' => META::ELASTIC_TYPE_INTEGER,
+            ];
+        }
+        
+        return $mapping;
+    }
 
     /**
      * This function automatically calls all the attribute function in this
@@ -622,6 +643,8 @@ class ProductFetcher
         return '';
     }
 
+
+
     /**
      * Get stock quantity
      */
@@ -668,75 +691,24 @@ class ProductFetcher
      *
      * @param Product $product
      *
-     * @return array
+     * @return float
      *
      * @todo: optimize `getGroups` query and include default Customer IDs for higher performance
      */
     protected static function getPriceTaxExcl($product)
     {
-        // Simulate customer group prices via Customers in those groups
-        // Base price (0) is grabbed directly from the database
-        // Visitor group (1) is used as the default group for tax excl. prices
-        try {
-            $prices = [
-                'group_0' => (float) static::getProductBasePrice($product->id),
-                'group_1' => (float) Product::getPriceStatic($product->id, false, null, _TB_PRICE_DATABASE_PRECISION_),
-            ];
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            return [];
-        }
-        try {
-            foreach (Group::getGroups(Context::getContext()->language->id) as $group) {
-                if ((int) $group['id_group'] === 1) {
-                    continue;
-                }
-                // Get a default customer in this group, if not available, skip. You will have to reindex this product
-                // once you add a customer to this (new) group
-                $idCustomer = Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
-                    (new DbQuery())
-                        ->select('c.`id_customer`')
-                        ->from(bqSQL(Customer::$definition['table']), 'c')
-                        ->innerJoin('customer_group', 'cg', 'cg.`id_customer` = c.`id_customer`')
-                        ->where('cg.`id_group` = '.(int) $group['id_group'])
-                );
-                if (!$idCustomer) {
-                    $prices["group_{$group['id_group']}"] = $prices['group_0'];
-
-                    continue;
-                }
-                $prices["group_{$group['id_group']}"] = (float) Product::getPriceStatic(
-                    $product->id,
-                    false,
-                    null,
-                    _TB_PRICE_DATABASE_PRECISION_,
-                    null,
-                    false,
-                    true,
-                    1,
-                    false,
-                    $idCustomer
-                );
-            }
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            return [];
-        }
-
-        return $prices;
+        return (float) static::getProductBasePrice($product->id);
     }
 
+
     /**
-     * Generate large image link
-     *
      * @param Product $product
-     * @param int     $idLang
-     *
+     * @param $idLang
      * @return string
+     * @throws PrestaShopException
+     * @throws \PrestaShopDatabaseException
      */
-    protected static function generateImageLinkLarge($product, $idLang)
+    protected static function generateImageLinkLarge(Product $product, $idLang)
     {
         $link = new Link();
         try {
@@ -875,9 +847,39 @@ class ProductFetcher
      * @throws PrestaShopException
      * @throws \PrestaShopDatabaseException
      */
-    protected static function getCategoriesIds($product)
+    protected static function getCategoriesIds(Product $product)
     {
         return $product->getCategories();
+    }
+
+    protected static function getEan(Product $product)
+    {
+        return $product->ean13;
+    }
+
+    protected static function getRequestPath(Product $product)
+    {
+        return $product->link_rewrite;
+    }
+
+
+    /**
+     * @param Product $product
+     * @param $idLang
+     * @throws PrestaShopException
+     * @throws \PrestaShopDatabaseException
+     */
+    protected static function getCategories(Product $product, $idLang)
+    {
+        $categoryIds = $product->getCategories();
+        $categories=[];
+        foreach ($categoryIds as $idCategory) {
+            $category = new \Category($idCategory, $idLang);
+            $categories[]= array(
+                'category_id'  => $idCategory,
+                'name'         => $category->name
+            );
+        }
     }
 
 
@@ -945,7 +947,7 @@ class ProductFetcher
      *
      * @return bool
      */
-    protected static function getCustomizationRequired($product)
+    protected static function getCustomizationRequired(Product $product)
     {
         return (bool) $product->customization_required;
     }
@@ -957,7 +959,7 @@ class ProductFetcher
      *
      * @return string
      */
-    protected static function getManufacturerName($product)
+    protected static function getManufacturerName(Product $product)
     {
         try {
             return Manufacturer::getNameById((int) $product->id_manufacturer);
@@ -975,7 +977,7 @@ class ProductFetcher
      *
      * @return bool
      */
-    protected static function getMinimalQuantity($product)
+    protected static function getMinimalQuantity(Product $product)
     {
         return (int) $product->minimal_quantity;
     }
@@ -987,10 +989,23 @@ class ProductFetcher
      *
      * @return bool
      */
-    protected static function getShowPrice($product)
+    protected static function getShowPrice(Product $product)
     {
         return (bool) $product->show_price;
     }
+
+    /**
+     * @param Product $product
+     * @return array
+     */
+    protected static function getTierPrices(Product $product)
+    {
+        return [];
+    }
+
+
+
+
 
     /**
      * Get supplier name
@@ -999,7 +1014,7 @@ class ProductFetcher
      *
      * @return string
      */
-    protected static function getSupplierName($product)
+    protected static function getSupplierName(Product $product)
     {
         return (string) $product->supplier_name;
     }
@@ -1025,7 +1040,7 @@ class ProductFetcher
      *
      * @return bool
      */
-    protected static function getIsVirtual($product)
+    protected static function getIsVirtual(Product $product)
     {
         return (bool) $product->is_virtual;
     }
@@ -1037,7 +1052,7 @@ class ProductFetcher
      *
      * @return bool
      */
-    protected static function getOnSale($product)
+    protected static function getOnSale(Product $product)
     {
         return (bool) $product->on_sale;
     }
@@ -1049,7 +1064,7 @@ class ProductFetcher
      *
      * @return bool
      */
-    protected static function getOnlineOnly($product)
+    protected static function getOnlineOnly(Product $product)
     {
         return (bool) $product->online_only;
     }
@@ -1061,7 +1076,7 @@ class ProductFetcher
      *
      * @return bool
      */
-    protected static function getAvailableForOrder($product)
+    protected static function getAvailableForOrder(Product $product)
     {
         return (bool) $product->available_for_order;
     }
@@ -1088,6 +1103,11 @@ class ProductFetcher
         return (bool) $product->available_now;
     }
 
+    protected static function getTaxClassId(Product $product)
+    {
+        return (int) $product->id_tax_rules_group;
+    }
+
     /**
      * Get `available_later` flag
      *
@@ -1095,7 +1115,7 @@ class ProductFetcher
      *
      * @return bool
      */
-    protected static function getAvailableLater($product)
+    protected static function getAvailableLater(Product $product)
     {
         return (bool) $product->available_later;
     }
@@ -1107,7 +1127,7 @@ class ProductFetcher
      *
      * @return bool
      */
-    protected static function getInStock($product)
+    protected static function getInStock(Product $product)
     {
         try {
             return (bool) Product::getQuantity($product->id) > 0;
@@ -1116,6 +1136,88 @@ class ProductFetcher
 
             return false;
         }
+    }
+
+    /**
+     * @param Product $product
+     * @return string
+     */
+    protected static function getSku(Product $product)
+    {
+        return $product->reference;
+    }
+
+
+    /**
+     * @param Product $product
+     * @return int
+     * TODO: Map prestashop visibility info to magento product status
+     */
+    protected static function getStatus(Product $product)
+    {
+        return 1;
+    }
+
+    /**
+     * @param Product $product
+     * @return int
+     * TODO: Map prestashop visibility info to magento product visibility
+     */
+    protected static function getVisibility(Product $product)
+    {
+        return 3;
+    }
+
+    /**
+     * @param Product $product
+     * @return string
+     * todo: impement product combinations suppport
+     */
+    protected static function getTypeId(Product $product)
+    {
+        return 'simple';
+    }
+
+    /**
+     * @param Product $product
+     * @return string
+     */
+    protected static function getShortDescription(Product $product)
+    {
+        return $product->description_short;
+    }
+
+    protected static function getStock(Product $product)
+    {
+        $stockAvailable = new StockAvailable(StockAvailable::getStockAvailableIdByProductId($product->id));
+        return [
+            'item_id'     => $product->id,
+            'product_id'  => $product->id,
+            'stock_id'    => $stockAvailable->id,
+            'qty'         => $stockAvailable->quantity,
+            'is_in_stock' => 1,
+            'is_qty_decimal' => true,
+            'show_default_notification_message' => false,
+            'use_config_min_qty' => false,
+            'min_qty' => 0,
+            'use_config_min_sale_qty' => false,
+            'min_sale_qty' => 1,
+            'use_config_max_sale_qty' => false,
+            'max_sale_qty' => 0,
+            'use_config_backorders' => false,
+            'backorders' => 0,
+            'use_config_notify_stock_qty' => false,
+            'notify_stock_qty' => 1,
+            'use_config_qty_increments' => false,
+            'qty_increments' => 1,
+            'use_config_enable_qty_inc' => false,
+            'enable_qty_increments' =>  false,
+            'use_config_manage_stock' => false,
+            'manage_stock' => false,
+            'is_decimal_divided' => false,
+            'stock_status_changed_auto' => 0,
+        ];
+
     }
 
     /**
@@ -1144,6 +1246,27 @@ class ProductFetcher
 
             return 0;
         }
+    }
+
+    protected static function getMediaGallery(Product $product, $idLang)
+    {
+        $mediaGallery=[];
+        foreach ($product->getImages($idLang) as $image) {
+            $imagePath= '/img/p/'.chunk_split($image['id_image'], 1, '/').$image['id_image'].'.jpg'; //todo: generate dynamic image path
+            $mediaGallery[]=array(
+                'image' => $imagePath,
+                'lab'   => $image['legend'],
+                'pos'   => $image['position'],
+                'typ'   => 'image'
+            );
+        }
+        return $mediaGallery;
+    }
+
+    protected static function getImage(Product $product, $idLang)
+    {
+        $id_image = $product->getCoverWs($idLang);
+        return '/img/p/'.chunk_split($id_image, 1, '/').$id_image.'.jpg';
     }
 
 
@@ -1214,4 +1337,121 @@ class ProductFetcher
 
         return $colors;
     }
+
+    /**
+     * Get amount of products for the given shop and lang
+     *
+     * @param int|null $idLang
+     * @param int|null $idShop
+     *
+     * @return int
+     */
+    public static function countObjects($idLang = null, $idShop = null)
+    {
+        if (!$idShop) {
+            $idShop = Shop::getContextShopID();
+        }
+
+        try {
+
+            return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
+                (new DbQuery())
+                    ->select('COUNT(*)')
+                    ->from(bqSQL(Product::$definition['table']).'_shop', 'ps')
+                    ->leftJoin(
+                        bqSQL(Product::$definition['table']).'_lang',
+                        'pl',
+                        'ps.`id_product` = pl.`id_product`'.($idLang ? ' AND pl.`id_lang` = '.(int) $idLang : '').' '.($idShop ? ' AND pl.`id_shop` = '.(int) $idShop : '')
+                    )
+                    ->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` l ON pl.`id_lang` = l.`id_lang` AND l.`active` = 1' : '')
+                    ->where('ps.`id_shop` = '.(int) $idShop)
+            );
+        } catch (\PrestaShopException $e) {
+            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+            return 0;
+        }
+    }
+
+    /**
+     * @param int      $limit
+     * @param int      $offset
+     * @param int|null $idLang
+     * @param int|null $idShop
+     *
+     * @return array
+     * @throws \PrestaShopException
+     */
+    public static function getObjectsToIndex($limit = 0, $offset = 0, $idLang = null, $idShop = null)
+    {
+        // We have to prepare the back office dispatcher, otherwise it will not generate friendly URLs for languages
+        // other than the current language
+        static::prepareDispatcher();
+
+        try {
+            $results = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS(
+                (new DbQuery())
+                    ->select('ps.`id_product`, ps.`id_shop`, pl.`id_lang`, ps.`date_upd` AS `product_updated`')
+                    ->select('eis.`date_upd` AS `product_indexed`')
+                    ->from(bqSQL(Product::$definition['table']).'_shop', 'ps')
+                    ->leftJoin(
+                        bqSQL(Product::$definition['table']).'_lang',
+                        'pl',
+                        'pl.`id_product` = ps.`id_product`'.($idLang ? ' AND pl.`id_lang` = '.(int) $idLang : '')
+                    )
+                    ->leftJoin(
+                        bqSQL(IndexStatus::$definition['table']),
+                        'eis',
+                        'ps.`id_product` = eis.`id_entity` AND ps.`id_shop` = eis.`id_shop` AND eis.`id_lang` = pl.`id_lang` AND eis.`error` IS NULL AND eis.`index` = "'. bqSQL(static::$indexName).'"'
+                    )
+                    ->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` l ON pl.`id_lang` = l.`id_lang` AND l.`active` = 1' : '')
+                    ->where($idShop ? 'ps.`id_shop` = '.(int) $idShop : '')
+                    ->where('ps.`date_upd` != eis.`date_upd` OR eis.`date_upd` IS NULL')
+                    ->groupBy('ps.`id_product`, ps.`id_shop`, pl.`id_lang`')
+                    ->limit($limit, $offset)
+            );
+        } catch (\PrestaShopException $e) {
+            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+            $results = false;
+        }
+
+        $products = [];
+        foreach ($results as &$result) {
+            $product = static::initObject($result['id_product'], $result['id_lang'], $result['id_shop']);
+
+            $product->elastic_id_lang = $result['id_lang'];
+            $product->elastic_id_shop = $result['id_shop'];
+
+            $products[] = $product;
+        }
+
+        return $products;
+    }
+
+    public static function getIndexed( $idLang = null, $idShop = null)
+    {
+        try {
+            if (!isset(static::$className) || !class_exists(static::$className)){
+                return 0;
+            }
+            return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
+                (new DbQuery())
+                    ->select('COUNT(*)')
+                    ->from(bqSQL(IndexStatus::$definition['table']), 'eis')
+                    ->innerJoin(bqSQL((static::$className)::$definition['table']).'_shop', 'o', 'o.`'.(static::$className)::$definition['primary'].'` = eis.`id_entity` AND o.`id_shop` = eis.`id_shop` AND o.`date_upd` = eis.`date_upd`')
+                    ->where($idLang ? 'eis.`id_lang` = '.(int) $idLang : '')
+                    ->where($idShop ? 'eis.`id_shop` = '.(int) $idShop : '')
+                    ->where('eis.`index` = "'. bqSQL(static::$indexName).'"')
+                    ->where('eis.`error` IS NULL ')
+            );
+        } catch (\PrestaShopException $e) {
+
+            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+            return 0;
+        }
+    }
+
+
 }

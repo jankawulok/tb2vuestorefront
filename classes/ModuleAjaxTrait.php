@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace Tb2vuestorefrontModule;
+namespace Tb2VueStorefrontModule;
 
 use Tb2vuestorefront;
 use Configuration;
@@ -28,6 +28,7 @@ use Elasticsearch\Client;
 use Exception;
 use ReflectionClass;
 use Tools;
+use Fetcher;
 
 if (!defined('_TB_VERSION_')) {
     return;
@@ -96,12 +97,12 @@ trait ModuleAjaxTrait
         die(json_encode([
             'success' => true,
             'indexed' => 0,
-            'total'   => (int) IndexStatus::countProducts(null, $this->context->shop->id),
+            'total'   => (int) IndexStatus::countObjects(null, $this->context->shop->id),
         ]));
     }
 
     /**
-     * Index remaining products
+     * Index remaining objects
      *
      * @throws \PrestaShopException
      */
@@ -135,119 +136,46 @@ trait ModuleAjaxTrait
 
             return;
         }
+//        die(ProductFetcher::countObjects(null, $this->context->shop-id));
+//        die(json_encode(CategoryFetcher::getObjectsToIndex($amount, 0, 1, 1) )) ;
+        // die(json_encode(CategoryFetcher::getCategoriesToIndex($amount, 0, null, $this->context->shop->id) )) ;
         $idShop = Context::getContext()->shop->id;
-        $idLang = Context::getContext()->language->id;
+//        $idLang = Context::getContext()->language->id;
         $indexVersion = (int)Configuration::get(Tb2vuestorefront::INDEX_VERSION);
         $dateUpdAlias = Tb2vuestorefront::getAlias('date_upd');
-        $priceTaxExclAlias = Tb2vuestorefront::getAlias('price_tax_excl');
-        $metas = Meta::getAllMetas([$idLang]);
-        if (isset($metas[$idLang])) {
-            $metas = $metas[$idLang];
-        }
+
 
         // Check which products are available for indexing
-        $products = IndexStatus::getProductsToIndex($amount, 0, null, $this->context->shop->id);
+        foreach (EntityType::getEntityTypes(true, $idShop) as $entityType)
+        {
+            $objects = $entityType['class_name']::getObjectsToIndex($amount, 0, null, $idShop);
+            if (empty($objects)) {
+                continue;
+            } else {
+                break;
+            }
 
-        if (empty($products)) {
+        }
+//        die(json_encode($objects));
+        if (empty($objects)) {
             // Nothing to index
             die(json_encode([
                 'success'  => true,
                 'indexed'  => IndexStatus::getIndexed(null, $this->context->shop->id),
-                'total'    => (int) IndexStatus::countProducts(null, $this->context->shop->id),
-                'nbErrors' => 0,
+                'total'    => (int) IndexStatus::countObjects(null, $this->context->shop->id),
+                'nbErrors' => IndexStatus::getNbErrors(null, null, $this->context->shop->id),
                 'errors'   => [],
             ]));
         }
-
-        $params = [
-            'body' => [],
-        ];
-        foreach ($products as &$product) {
-            $params['body'][] = [
-                'index' => [
-                    '_index' => "{$index}_{$idShop}_{$product->elastic_id_lang}_{$indexVersion}",
-                    '_type'  => 'product',
-                    '_id'     => $product->id,
-                ],
-            ];
-
-            // Process prices for customer groups
-            foreach ($product->{$priceTaxExclAlias} as $group => $value) {
-                $product->{"{$priceTaxExclAlias}_{$group}"} = $value;
-            }
-            unset($product->{$priceTaxExclAlias});
-            $params['body'][] = $product;
-        }
-
-        // Push to Elasticsearch
-        try {
-            $results = $client->bulk($params);
-        } catch (Exception $exception) {
-            die(json_encode([
-                'success' => false,
-            ]));
-        }
-        $failed = [];
-        foreach ($results['items'] as $result) {
-            if ((int) substr($result['index']['status'], 0, 1) !== 2) {
-                preg_match(
-                    '/(?P<index>[a-zA-Z]+)\_(?P<id_shop>\d+)\_(?P<id_lang>\d+)/',
-                    $result['index']['_index'],
-                    $details
-                );
-                $failed[] = [
-                    'id_lang'    => (int) $details['id_lang'],
-                    'id_shop'    => (int) $details['id_shop'],
-                    'id_product' => (int) $result['index']['_id'],
-                    'error'      => isset($result['index']['error']['reason'])
-                        ? $result['index']['error']['reason'].(isset($result['index']['error']['caused_by']['reason'])
-                            ? ' '.$result['index']['error']['caused_by']['reason']
-                            : '')
-                        : 'Unknown error',
-                ];
-            }
-        }
-        if (!empty($failed)) {
-            foreach ($failed as $failure) {
-                foreach ($products as $index => $product) {
-                    if ((int) $product->id === (int) $failure['id_product']
-                        && (int) $product->elastic_id_shop === (int) $failure['id_shop']
-                        && (int) $product->elastic_id_lang === (int) $failure['id_lang']
-                    ) {
-                        try {
-                            Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."tb2vuestorefront_index_status` (`id_product`,`id_lang`,`id_shop`, `error`) VALUES ('{$failed['id_product']}', '{$failed['id_lang']}', '{$failed['id_shop']}', '{$failed['error']}') ON DUPLICATE KEY UPDATE `error` = VALUES(`error`)");
-                        } catch (\PrestaShopException $e) {
-                            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-                        }
-
-                        unset($products[$index]);
-                    }
-                }
-            }
-        }
-
-        // Insert index status into database
-        $values = '';
-        foreach ($products as &$product) {
-            $values .=  "('{$product->id}', '{$product->elastic_id_lang}', '{$this->context->shop->id}', '{$product->{$dateUpdAlias}}', ''),";
-        }
-        $values = rtrim($values, ',');
-        if ($values) {
-            try {
-                Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_."tb2vuestorefront_index_status` (`id_product`,`id_lang`,`id_shop`, `date_upd`, `error`) VALUES $values ON DUPLICATE KEY UPDATE `date_upd` = VALUES(`date_upd`), `error` = ''");
-            } catch (\PrestaShopException $e) {
-                \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-            }
-        }
-
-        // Response status
+        $response = Indexer::bulkIndex($objects);
         die(json_encode([
-            'success'  => true,
+            'success'  => $response['success'],
             'indexed'  => IndexStatus::getIndexed(null, $this->context->shop->id),
-            'total'    => (int) IndexStatus::countProducts(null, $this->context->shop->id),
-            'nbErrors' => count($failed),
-            'errors'   => $failed,
+            'total'    => (int) IndexStatus::countObjects(null, $this->context->shop->id),
+            'nbErrors' => IndexStatus::getNbErrors(null, null, $this->context->shop->id),
+            'errors'   => $response['errors'],
         ]));
+
     }
 
     /**
@@ -286,7 +214,7 @@ trait ModuleAjaxTrait
         die(json_encode([
             'success' => true,
             'indexed' => IndexStatus::getIndexed(null, $idShop),
-            'total'   => (int) IndexStatus::countProducts(null, $idShop),
+            'total'   => (int) IndexStatus::countObjects(null, $idShop),
         ]));
     }
 
@@ -314,7 +242,7 @@ trait ModuleAjaxTrait
         die(json_encode([
             'success' => true,
             'indexed' => IndexStatus::getIndexed(null, $idShop),
-            'total'   => (int) IndexStatus::countProducts(null, $idShop),
+            'total'   => (int) IndexStatus::countObjects(null, $idShop),
         ]));
     }
 

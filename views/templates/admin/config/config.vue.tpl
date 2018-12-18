@@ -82,7 +82,7 @@
 
           // Finally
           if ((parseInt(this.status, 10) !== 200 && ajaxAttempts > 0)
-            || (!self.$store.state.cancelingIndexing && typeof response !== 'undefined' && response && response.indexed !== response.total)
+            || (!self.$store.state.cancelingIndexing && typeof response !== 'undefined' && response && response.indexed !== response.total - response.nbErrors)
           ) {
             if (this.status < 200 || this.status >= 400) {
               // Decrement if failure...
@@ -142,8 +142,10 @@
                 total: response.total
               });
             }
-
+              console.log(callback);
             if (typeof callback === 'function') {
+
+
               callback('success', response, this);
             }
           } else {
@@ -377,7 +379,13 @@
           eraseIndex(self, function (status) {
             self.$store.commit('setSaving', false);
             if (status === 'success') {
-              self.startIndexing(self);
+                self.createIndex(self, function (status, response, self){
+                    console.log(status);
+                    if  (status === 'success') {
+                        self.startIndexing(self);
+                    }
+                });
+
             }
           });
         },

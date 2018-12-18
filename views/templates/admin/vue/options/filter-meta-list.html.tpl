@@ -81,14 +81,9 @@
                 <div class="col-lg-8">
                   <select @change="filterStyleChanged(meta, $event)" class="selectpicker">
                     <option value="1" :selected="parseInt(meta.display_type) === 1">{l s='Checkbox' mod='tb2vuestorefront'}</option>
-                    {*<option value="2" :selected="parseInt(meta.display_type) === 2">{l s='Radio button' mod='tb2vuestorefront'}</option>*}
-                    {*<option value="3" :selected="parseInt(meta.display_type) === 3">{l s='Drop-down list' mod='tb2vuestorefront'}</option>*}
-                    <option value="4"
-                            :selected.once="parseInt(meta.display_type) === 4"
-                            v-if="meta.code === '{Tb2vuestorefront::getAlias(price_tax_excl)|escape:'javascript':'UTF-8'}'"
-                    >
-                      {l s='Slider' mod='tb2vuestorefront'}
-                    </option>
+                    <option value="2" :selected="parseInt(meta.display_type) === 2">{l s='Radio button' mod='tb2vuestorefront'}</option>
+                    <option value="3" :selected="parseInt(meta.display_type) === 3">{l s='Drop-down list' mod='tb2vuestorefront'}</option>
+                    <option value="4" :selected="parseInt(meta.display_type) === 4">{l s='Slider' mod='tb2vuestorefront'}</option>
                     <option value="5"
                             :selected.once="parseInt(meta.display_type) === 5"
                             data-content="<span>{l s='Color' mod='tb2vuestorefront'}</span> <img src='{$smarty.const.__PS_BASE_URI__|escape:'htmlall':'UTF-8'}img/admin/color_swatch.png' width='16' height='16'>"
@@ -96,6 +91,7 @@
                     >
                       {l s='Color' mod='tb2vuestorefront'}
                     </option>
+                    <option value="6" :selected="parseInt(meta.display_type) === 6">{l s='Range slider' mod='tb2vuestorefront'}</option>
                   </select>
                 </div>
               </div>

@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace Tb2vuestorefrontModule;
+namespace Tb2VueStorefrontModule;
 
 use Context;
 use Configuration;
@@ -72,7 +72,7 @@ trait MetaAttributesTrait
 
         $type = 'property';
         foreach (ProductFetcher::$attributes as $defaultAttributeName => $defaultAttribute) {
-            $id = "{$defaultAttributeName}";
+            $id = "{$defaultAttributeName}property";
             $position = isset($metas[$idLang][$id]['position']) ? $metas[$idLang][$id]['position'] : 0;
             $name = [];
             try {
@@ -90,8 +90,8 @@ trait MetaAttributesTrait
             if (isset($defaultAttribute['elastic_types'])
                 && !in_array($elasticType, $defaultAttribute['elastic_types'])
             ) {
-                $elasticType = isset($defaultAttribute['default'])
-                    ? $defaultAttribute['default']
+                $elasticType = isset($defaultAttribute['type'])
+                    ? $defaultAttribute['type']
                     : $defaultAttribute['elastic_types'][0];
             }
 
@@ -145,7 +145,7 @@ trait MetaAttributesTrait
         try {
             foreach (\Feature::getFeatures($idLang) as $feature) {
                 $id = Tools::link_rewrite($feature['name']);
-                $id = "{$id}";
+                $id = "{$id}feature";
                 $position = isset($metas[$idLang][$id]['position']) ? $metas[$idLang][$id]['position'] : 0;
                 $name = [];
                 foreach (Language::getLanguages(true, false, true) as $language) {

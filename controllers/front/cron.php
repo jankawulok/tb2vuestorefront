@@ -41,7 +41,7 @@ if (!defined('_TB_VERSION_')) {
         $_GET['controller'] = 'cron';
 
         require_once __DIR__.'/../../../../config/config.inc.php';
-        require_once __DIR__.'/../../elasticsearch.php';
+        require_once __DIR__.'/../../tb2vuestorefront.php';
     }
 }
 
@@ -91,8 +91,43 @@ class ElasticsearchcronModuleFrontController extends ModuleFrontController
         }
 
         /** @var Elasticsearch $module */
-        $module = Module::getInstanceByName('elasticsearch');
+        $module = Module::getInstanceByName('tb2vuestorefront');
         $module->cronProcessRemainingProducts($chunks, $idShop);
+//        \Tb2VueStorefrontModule\Indexer::createMappings(null, [1]);
+
+
+
+
+
+        $indices = [
+            ['Tb2VueStorefrontModule\\AttributeFetcher', 'attribute'],
+            ['Tb2VueStorefrontModule\\CategoryFetcher', 'category'],
+            ['Tb2VueStorefrontModule\\CmsCategoryFetcher', 'cmscategory'],
+            ['Tb2VueStorefrontModule\\CmsFetcher', 'cms'],
+            ['Tb2VueStorefrontModule\\ManufacturerFetcher', 'manufacturer'],
+            ['Tb2VueStorefrontModule\\ProductFetcher', 'product'],
+            ['Tb2VueStorefrontModule\\TaxRuleFetcher', 'taxrule'],
+        ];
+        foreach ($indices as $i) {
+            var_dump($i);
+            foreach (Shop::getShops() as $shop) {
+                    var_dump(new Tb2VueStorefrontModule\EntityType());
+                $index = new Tb2VueStorefrontModule\EntityType();
+                $index->entity_name = $i[1];
+                $index->class_name = $i[0];
+                $index->id_shop = $shop['id_shop'];
+                $index->enabled = true;
+                var_dump($index);
+                echo "test";
+                $index->add();
+            }
+        }
+
+
+
+
+
+
     }
 }
 

@@ -17,7 +17,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace Tb2vuestorefrontModule;
+namespace Tb2VueStorefrontModule;
 
 use Configuration;
 use Context;
@@ -27,6 +27,7 @@ use Dispatcher;
 use Language;
 use Product;
 use Shop;
+use Tb2VueStorefrontModule\EntityType as EntityType;
 
 if (!defined('_TB_VERSION_')) {
     return;
@@ -51,75 +52,18 @@ class IndexStatus extends \ObjectModel
      * @var array
      */
     public static $definition = [
-        'primary' => 'id_tb2vuestorefront_index_status',
-        'table' => 'tb2vuestorefront_index_status',
-        'fields'  => [
-            'id_product' => ['type' => self::TYPE_INT,  'validate' => 'isUnsignedInt', 'required' => true],
-            'id_lang'    => ['type' => self::TYPE_INT,  'validate' => 'isUnsignedInt', 'required' => true],
-            'id_shop'    => ['type' => self::TYPE_INT,  'validate' => 'isUnsignedInt', 'required' => true],
-            'date_upd'   => ['type' => self::TYPE_DATE, 'validate' => 'isDate',        'required' => true],
+        'primary'   => 'id_tb2vuestorefront_index_status',
+        'table'     => 'tb2vuestorefront_index_status',
+        'fields'    => [
+            'id_entity'      => ['type' => self::TYPE_INT,    'validate' => 'isUnsignedInt', 'required' => true],
+            'index'          => ['type' => self::TYPE_STRING, 'validate' => 'isUnsignedInt', 'required' => true],
+            'id_lang'        => ['type' => self::TYPE_INT,    'validate' => 'isUnsignedInt', 'required' => true],
+            'id_shop'        => ['type' => self::TYPE_INT,    'validate' => 'isUnsignedInt', 'required' => true],
+            'date_upd'       => ['type' => self::TYPE_DATE,   'validate' => 'isDate',        'required' => true],
         ],
     ];
 
-    /**
-     * Get amount of products indexed for the given lang and shop
-     *
-     * @param int $idLang
-     * @param int $idShop
-     *
-     * @return int
-     */
-    public static function getIndexed($idLang = null, $idShop = null)
-    {
-        try {
-            return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
-                (new DbQuery())
-                    ->select('COUNT(*)')
-                    ->from(bqSQL(static::$definition['table']), 'eis')
-                    ->innerJoin(bqSQL(Product::$definition['table']).'_shop', 'p', 'p.`id_product` = eis.`id_product` AND p.`id_shop` = eis.`id_shop` AND p.`date_upd` = eis.`date_upd`')
-                    ->where($idLang ? 'eis.`id_lang` = '.(int) $idLang : '')
-                    ->where($idShop ? 'eis.`id_shop` = '.(int) $idShop : '')
-            );
-        } catch (\PrestaShopException $e) {
-            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
 
-            return 0;
-        }
-    }
-
-    /**
-     * Get amount of products for the given shop and lang
-     *
-     * @param int|null $idLang
-     * @param int|null $idShop
-     *
-     * @return int
-     */
-    public static function countProducts($idLang = null, $idShop = null)
-    {
-        if (!$idShop) {
-            $idShop = Shop::getContextShopID();
-        }
-
-        try {
-            return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
-                (new DbQuery())
-                    ->select('COUNT(*)')
-                    ->from(bqSQL(Product::$definition['table']).'_shop', 'ps')
-                    ->leftJoin(
-                        bqSQL(Product::$definition['table']).'_lang',
-                        'pl',
-                        'ps.`id_product` = pl.`id_product`'.($idLang ? ' AND pl.`id_lang` = '.(int) $idLang : '')
-                    )
-                    ->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` l ON pl.`id_lang` = l.`id_lang` AND l.`active` = 1' : '')
-                    ->where('ps.`id_shop` = '.(int) $idShop)
-            );
-        } catch (\PrestaShopException $e) {
-            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            return 0;
-        }
-    }
 
     /**
      * Get amount of languages for the given shop
@@ -170,132 +114,74 @@ class IndexStatus extends \ObjectModel
         }
     }
 
+    public static function getIndexed( $idLang = null, $idShop = null)
+    {
+        try {
+            $count = 0;
+            $entities = EntityType::getAll(true, $idShop);
+            foreach ($entities as $entity) {
+                $count += $entity['class_name']::getIndexed($idLang, $idShop);
+
+            }
+            return $count;
+        } catch (\PrestaShopException $e) {
+
+            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+            return 0;
+        }
+    }
+
     /**
-     * @param int      $limit
-     * @param int      $offset
-     * @param int|null $idLang
-     * @param int|null $idShop
-     *
-     * @return array
+     * @param string $indexName
+     * @param string $idLang
+     * @param string $idShop
+     * @return int
+     * @throws \PrestaShopDatabaseException
      * @throws \PrestaShopException
      */
-    public static function getProductsToIndex($limit = 0, $offset = 0, $idLang = null, $idShop = null)
+    public static function getNbErrors($indexName = null, $idLang = null, $idShop = null)
     {
-        // We have to prepare the back office dispatcher, otherwise it will not generate friendly URLs for languages
-        // other than the current language
-        static::prepareDispatcher();
-
         try {
-            $results = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS(
+            return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
                 (new DbQuery())
-                    ->select('ps.`id_product`, ps.`id_shop`, pl.`id_lang`, ps.`date_upd` AS `product_updated`')
-                    ->select('eis.`date_upd` AS `product_indexed`')
-                    ->from(bqSQL(Product::$definition['table']).'_shop', 'ps')
-                    ->leftJoin(
-                        bqSQL(Product::$definition['table']).'_lang',
-                        'pl',
-                        'pl.`id_product` = ps.`id_product`'.($idLang ? ' AND pl.`id_lang` = '.(int) $idLang : '')
-                    )
-                    ->leftJoin(
-                        bqSQL(IndexStatus::$definition['table']),
-                        'eis',
-                        'ps.`id_product` = eis.`id_product` AND ps.`id_shop` = eis.`id_shop` AND eis.`id_lang` = pl.`id_lang`'
-                    )
-                    ->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` l ON pl.`id_lang` = l.`id_lang` AND l.`active` = 1' : '')
-                    ->where($idShop ? 'ps.`id_shop` = '.(int) $idShop : '')
-                    ->where('ps.`date_upd` != eis.`date_upd` OR eis.`date_upd` IS NULL')
-                    ->groupBy('ps.`id_product`, ps.`id_shop`, pl.`id_lang`')
-                    ->limit($limit, $offset)
+                    ->select('COUNT(*)')
+                    ->from(bqSQL(static::$definition['table']), 'eis')
+                    ->where($idLang ? 'eis.`id_lang` = '.(int) $idLang : '')
+                    ->where('eis.`error` IS NOT NULL ')
+                    ->where($idShop ? 'eis.`id_shop` = '.(int) $idShop : '')
+                    ->where($indexName ? 'eis.`index` = '. bqSQL($indesName) : '')
             );
         } catch (\PrestaShopException $e) {
+
             \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
 
-            $results = false;
+            return 0;
         }
-
-        $products = [];
-        foreach ($results as &$result) {
-            $product = ProductFetcher::initProduct($result['id_product'], $result['id_lang']);
-
-            $product->elastic_id_lang = $result['id_lang'];
-            $product->elastic_id_shop = $result['id_shop'];
-
-            $products[] = $product;
-        }
-
-        return $products;
     }
 
-    /**
-     * By default the dispatcher does not load the default routes for languages that have been deactivated.
-     * This is a problem, because we also want to index languages that are not currently active.
-     * By inserting the routes from inactive languages we can still generate friendly URLs for inactive languages.
-     *
-     * @return void
-     */
-    protected static function prepareDispatcher()
+    public static function countObjects($idLang = null, $idShop = null)
     {
-        if (static::$dispatcherPrepared) {
-            return;
-        }
-
-        // Set new routes
-        $prodroutes = 'PS_ROUTE_product_rule';
-        $catroutes = 'PS_ROUTE_category_rule';
-        $supproutes = 'PS_ROUTE_supplier_rule';
-        $manuroutes = 'PS_ROUTE_manufacturer_rule';
-        $layeredroutes = 'PS_ROUTE_layered_rule';
-        $cmsroutes = 'PS_ROUTE_cms_rule';
-        $cmscatroutes = 'PS_ROUTE_cms_category_rule';
-        $moduleroutes = 'PS_ROUTE_module';
         try {
-            foreach (Language::getLanguages(true) as $lang) {
-                foreach (Dispatcher::getInstance()->default_routes as $id => $route) {
-                    switch ($id) {
-                        case 'product_rule':
-                            $rule = Configuration::get($prodroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'category_rule':
-                            $rule = Configuration::get($catroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'supplier_rule':
-                            $rule = Configuration::get($supproutes, (int) $lang['id_lang']);
-                            break;
-                        case 'manufacturer_rule':
-                            $rule = Configuration::get($manuroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'layered_rule':
-                            $rule = Configuration::get($layeredroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'cms_rule':
-                            $rule = Configuration::get($cmsroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'cms_category_rule':
-                            $rule = Configuration::get($cmscatroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'module':
-                            $rule = Configuration::get($moduleroutes, (int) $lang['id_lang']);
-                            break;
-                        default:
-                            $rule = $route['rule'];
-                            break;
-                    }
+            $count = 0;
+            $entities = EntityType::getAll(true, $idShop);
+            foreach ($entities as $entity) {
 
-                    Dispatcher::getInstance()->addRoute(
-                        $id,
-                        $rule,
-                        $route['controller'],
-                        $lang['id_lang'],
-                        $route['keywords'],
-                        isset($route['params']) ? $route['params'] : [],
-                        Context::getContext()->shop->id
-                    );
-                }
+                $count += $entity['class_name']::countObjects($idLang, $idShop);
+
             }
+            return $count;
         } catch (\PrestaShopException $e) {
-            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-        }
 
-        static::$dispatcherPrepared = true;
+            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+            return 0;
+        }
     }
+
+
+
+
+
+
 }
