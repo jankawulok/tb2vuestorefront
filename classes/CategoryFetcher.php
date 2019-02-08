@@ -279,6 +279,7 @@ class CategoryFetcher extends Fetcher
                 (new DbQuery())
                     ->select('o.`'.$primary.'`')
                     ->from(bqSQL(static::$className::$definition['table']), 'o')
+                    ->join(Shop::addSqlAssociation('category', 'o'))
                     ->leftJoin(
                         bqSQL(IndexStatus::$definition['table']),
                         'eis',
@@ -316,13 +317,12 @@ class CategoryFetcher extends Fetcher
         }
 
         try {
-            return (int)Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS(
+            return Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
                 (new DbQuery())
                     ->select('COUNT(*)')
                     ->from('category', 'c')
                     ->join(Shop::addSqlAssociation('category', 'c'))
-                    ->where('c.`id_parent` != 1')
-                    ->groupBy('c.`id_category`')
+                    ->where('c.`id_parent` != 0')
                     ->orderBy('c.`id_category`, category_shop.`position`')
             );
         } catch (\PrestaShopException $e) {
