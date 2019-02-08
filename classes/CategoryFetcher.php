@@ -110,7 +110,7 @@ class CategoryFetcher extends Fetcher
         ],
         'url_key'           => [
             'function'      => [__CLASS__, 'getLinkRewrite'],
-            'type'       => Meta::ELASTIC_TYPE_TEXT,
+            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
         'request_path'      => [
             'function'      => [__CLASS__, 'getLinkRewrite'],
@@ -138,7 +138,7 @@ class CategoryFetcher extends Fetcher
      * @throws PrestaShopException
      * @throws \PrestaShopDatabaseException
      */
-    protected static function getChildrenData(StdClass &$elasticObject, int $idLang, int $idShop)
+    protected static function getChildrenData(StdClass &$elasticObject, ?int $idLang, ?int $idShop)
     {
         $childCats = Category::getChildren($elasticObject->id, $idLang, true);
         $elasticObject->children=[];

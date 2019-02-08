@@ -100,7 +100,7 @@ class ManufacturerFetcher extends Fetcher
      * @throws \PrestaShopDatabaseException
      * @throws \PrestaShopException
      */
-    protected static function getManufacturerLogo(Manufacturer $manufacturer, int $idLang)
+    protected static function getManufacturerLogo(Manufacturer $manufacturer, ?int $idLang)
     {
         return (!file_exists(_PS_MANU_IMG_DIR_.$manufacturer->id.'-'.ImageType::getFormatedName('medium').'.jpg')) ? \Language::getIsoById($idLang).'-default' : $manufacturer->id;
 
@@ -113,7 +113,7 @@ class ManufacturerFetcher extends Fetcher
      * @throws \PrestaShopDatabaseException
      * @throws \PrestaShopException
      */
-    protected static function getProductCount(Manufacturer $manufacturer, int $idLang)
+    protected static function getProductCount(Manufacturer $manufacturer, ?int $idLang)
     {
         // TODO: write product count query or check if it is used by VSF
         return count($manufacturer->getProductsLite($idLang));

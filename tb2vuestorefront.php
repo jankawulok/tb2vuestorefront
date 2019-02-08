@@ -493,28 +493,16 @@ class Tb2vuestorefront extends Module
         $writeHosts = [];
         try {
             foreach ((array) json_decode(Configuration::get(static::SERVERS), true) as $host) {
-                if ($host['write']) {
-                    $parsed = self::splitUrl($host['url']);
-                    if (empty($parsed['host'])) {
-                        continue;
-                    }
-                    if (empty($parsed['scheme'])) {
-                        $parsed['scheme'] = 'http';
-                    }
-
-                    if (empty($parsed['port'])) {
-                        $parsed['port'] = ($parsed['scheme'] === 'https') ? 443 : 80;
-                    }
-
-                    $writeHosts[] = self::joinUrl($parsed);
+                if ($host['write'] == 1) {
+                    $writeHosts[] = $host['url'];
                 }
             }
+
         } catch (PrestaShopException $e) {
             Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
 
             return $writeHosts;
         }
-
         return $writeHosts;
     }
 
@@ -527,10 +515,8 @@ class Tb2vuestorefront extends Module
     {
         if (!isset(static::$writeClient)) {
             try {
-                // $logger = ClientBuilder::defaultLogger('elastic.log', Logger::DEBUG);
                 $client = ClientBuilder::create()
                     ->setHosts(static::getWriteHosts())
-                    // ->setLogger($logger)
                     ->build();
 
                 // Check connection, throws an exception if something's wrong

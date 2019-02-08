@@ -117,7 +117,7 @@ abstract class Fetcher
      * @throws PrestaShopException
      * @throws \PrestaShopDatabaseException
      */
-    public static function initObject(int $idEntity, int $idLang, int $idShop)
+    public static function initObject(int $idEntity, ?int $idLang, ?int $idShop)
     {
 
         $className = static::$className;
