@@ -44,7 +44,7 @@ use stdClass;
 use Tools;
 use StockAvailable;
 
-if (!defined('_TB_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     return;
 }
 

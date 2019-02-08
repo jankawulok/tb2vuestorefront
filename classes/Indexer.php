@@ -28,7 +28,7 @@ use Language;
 use Shop;
 use ReflectionClass;
 
-if (!defined('_TB_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     return;
 }
 

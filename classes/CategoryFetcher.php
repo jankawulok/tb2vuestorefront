@@ -28,7 +28,7 @@ use Category;
 use Shop;
 use stdClass;
 
-if (!defined('_TB_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     return;
 }
 

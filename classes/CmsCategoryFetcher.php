@@ -21,7 +21,7 @@ namespace Tb2VueStorefrontModule;
 
 use CmsCategory;
 
-if (!defined('_TB_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     return;
 }
 

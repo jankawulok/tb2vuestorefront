@@ -27,7 +27,7 @@ use Tb2VueStorefrontModule\ModuleAjaxTrait;
 // use Monolog\Logger;
 // use Monolog\Handler\StreamHandler;
 
-if (!defined('_TB_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     return;
 }
 

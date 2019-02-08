@@ -25,7 +25,7 @@ use Language;
 use Shop;
 use Tools;
 
-if (!defined('_TB_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     return;
 }
 

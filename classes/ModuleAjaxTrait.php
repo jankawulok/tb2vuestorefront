@@ -30,7 +30,7 @@ use ReflectionClass;
 use Tools;
 use Fetcher;
 
-if (!defined('_TB_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     return;
 }
 
@@ -136,11 +136,7 @@ trait ModuleAjaxTrait
 
             return;
         }
-//        die(ProductFetcher::countObjects(null, $this->context->shop-id));
-//        die(json_encode(CategoryFetcher::getObjectsToIndex($amount, 0, 1, 1) )) ;
-        // die(json_encode(CategoryFetcher::getCategoriesToIndex($amount, 0, null, $this->context->shop->id) )) ;
         $idShop = Context::getContext()->shop->id;
-//        $idLang = Context::getContext()->language->id;
         $indexVersion = (int)Configuration::get(Tb2vuestorefront::INDEX_VERSION);
         $dateUpdAlias = Tb2vuestorefront::getAlias('date_upd');
 
@@ -156,7 +152,6 @@ trait ModuleAjaxTrait
             }
 
         }
-//        die(json_encode($objects));
         if (empty($objects)) {
             // Nothing to index
             die(json_encode([
@@ -192,6 +187,7 @@ trait ModuleAjaxTrait
     public function ajaxProcessCreateIndex()
     {
         header('Content-Type: application/json; charset=utf-8');
+        // TODO: check if context is multishop
         $idShop = Context::getContext()->shop->id;
         $oldIndexVersion = (int)Configuration::get(Tb2vuestorefront::INDEX_VERSION);
         Configuration::updateValue(Tb2vuestorefront::INDEX_VERSION, ++$oldIndexVersion);

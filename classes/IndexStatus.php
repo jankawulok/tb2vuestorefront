@@ -29,7 +29,7 @@ use Product;
 use Shop;
 use Tb2VueStorefrontModule\EntityType as EntityType;
 
-if (!defined('_TB_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     return;
 }
 

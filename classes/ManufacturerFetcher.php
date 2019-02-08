@@ -22,7 +22,7 @@ namespace Tb2VueStorefrontModule;
 use Manufacturer;
 use ImageType;
 
-if (!defined('_TB_VERSION_')) {
+if (!defined('_PS_VERSION_')) {
     return;
 }
 
