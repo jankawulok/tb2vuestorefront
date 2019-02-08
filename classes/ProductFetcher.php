@@ -379,7 +379,7 @@ class ProductFetcher extends Fetcher
      * @return array
      * @throws \PrestaShopException
      */
-    public static function generateMappings($idLang, $idShop)
+    public static function generateMappings(int $idLang,int $idShop)
     {
         $mapping = parent::generateMappings($idLang, $idShop);
         $attributes =  (new Collection('AttributeGroup', $idLang))

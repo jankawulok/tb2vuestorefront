@@ -113,7 +113,7 @@ class AttributeFetcher extends Fetcher
 
 
 
-    public static function generateMappings($idShop, $idLang)
+    public static function generateMappings(int $idLang,int $idShop)
     {
         $mapping = parent::generateMappings($idShop, $idLang);
 

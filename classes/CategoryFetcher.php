@@ -122,7 +122,7 @@ class CategoryFetcher extends Fetcher
 
     ];
 
-    public static function initObject(int $idEntity, $idLang, $idShop)
+    public static function initObject(int $idEntity, ?int $idLang, ?int $idShop)
     {
         $elasticObject = parent::initObject($idEntity, $idLang, $idShop);
         static::getChildrenData($elasticObject, $idLang, $idShop);
