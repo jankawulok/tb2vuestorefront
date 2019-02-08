@@ -1346,7 +1346,7 @@ class ProductFetcher extends Fetcher
      *
      * @return int
      */
-    public static function countObjects($idLang = null, $idShop = null)
+    public static function countObjects($idLang = null, $idShop = null, $onlyActive = true)
     {
         if (!$idShop) {
             $idShop = Shop::getContextShopID();
@@ -1365,6 +1365,7 @@ class ProductFetcher extends Fetcher
                     )
                     ->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` l ON pl.`id_lang` = l.`id_lang` AND l.`active` = 1' : '')
                     ->where('ps.`id_shop` = '.(int) $idShop)
+                    ->where($onlyActive ? 'ps.`active` = 1' : '')
             );
         } catch (\PrestaShopException $e) {
             \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
@@ -1382,7 +1383,7 @@ class ProductFetcher extends Fetcher
      * @return array
      * @throws \PrestaShopException
      */
-    public static function getObjectsToIndex($limit = 0, $offset = 0, $idLang = null, $idShop = null)
+    public static function getObjectsToIndex($limit = 0, $offset = 0, $idLang = null, $idShop = null, $onlyActive = true)
     {
         // We have to prepare the back office dispatcher, otherwise it will not generate friendly URLs for languages
         // other than the current language
@@ -1406,6 +1407,7 @@ class ProductFetcher extends Fetcher
                     )
                     ->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` l ON pl.`id_lang` = l.`id_lang` AND l.`active` = 1' : '')
                     ->where($idShop ? 'ps.`id_shop` = '.(int) $idShop : '')
+                    ->where($onlyActive ? 'ps.`active` = 1' : '')
                     ->where('ps.`date_upd` != eis.`date_upd` OR eis.`date_upd` IS NULL')
                     ->groupBy('ps.`id_product`, ps.`id_shop`, pl.`id_lang`')
                     ->limit($limit, $offset)
