@@ -143,7 +143,7 @@ class Indexer
             foreach ($idLangs as $idLang) {
                 try {
                     $params = [
-                        'index' => "{$indexPrefix}_{$idShop}_{$idLang}_{$previousIndexVersion}",
+                        'index' => "{$indexPrefix}_{$idShop}_{$idLang}_*",
                         'name' => "{$indexPrefix}_{$idShop}_{$idLang}"
                     ];
                     $client->indices()->deleteAlias($params);
