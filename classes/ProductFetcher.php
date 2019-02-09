@@ -183,7 +183,10 @@ class ProductFetcher extends Fetcher
             'function'      => [__CLASS__, 'getRequestPath'],
             'type'          => Meta::ELASTIC_TYPE_TEXT,
         ],
-
+        'url_key'           => [
+            'function'      => [__CLASS__, 'getRequestPath'],
+            'type'          => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
         'description'       => [
             'function'      => null,
             'type'          => Meta::ELASTIC_TYPE_TEXT,
@@ -403,7 +406,7 @@ class ProductFetcher extends Fetcher
      * @return stdClass
      * @throws \PrestaShopException
      */
-    public static function initProduct($idProduct, $idLang)
+    public static function initObject(int $idEntity, ?int $idLang, ?int $idShop)
     {
         $elasticProduct = new stdClass();
         $elasticProduct->id = (int) $idProduct;

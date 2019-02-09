@@ -40,9 +40,6 @@ if (!defined('_PS_VERSION_')) {
 /**
  * Class Fetcher
  *
- * When fetching an object for Elasticsearch indexing, it will call the functions as defined in the
- * `$attributes` array. If the value `null` is used, it will grab the property directly from the object.
- *
  * @package Tb2vuestorefrontModule
  */
 abstract class Fetcher
@@ -70,7 +67,7 @@ abstract class Fetcher
 
 
     /**
-     * This function generates mapping for collection
+     * This function generates elasticsearch mapping for collection
      * TODO: get elastic_types if property has user selectable type
      *
      * @return array
@@ -97,7 +94,6 @@ abstract class Fetcher
                     }
                 }
             }
-
         }
         
         return [
@@ -110,6 +106,8 @@ abstract class Fetcher
 
 
     /**
+     * When fetching an object for Elasticsearch indexing, it will call the functions as defined in the
+     * `$attributes` array. If the value `null` is used, it will grab the property directly from the object.
      * @param int $idEntity
      * @param int $idLang
      * @param int $idShop
@@ -134,32 +132,28 @@ abstract class Fetcher
         if (!\Validate::isLoadedObject($object)) {
             return $elasticObject;
         }
+
         // Default properties
         foreach (static::$attributes as $propName => $propItems) {
-            if ($propItems['function'] != null){
 
-            }
+            // If the property is a function, call it
             if ($propItems['function'] != null) {
-
-
-
                 $elasticObject->{$propName} = $propItems['function'][0]::{$propItems['function'][1]}($object, $idLang, $idShop);
 
                 continue;
             }
+            // If constant, get value from attributes definition
             if (isset($propItems['const'])) {
                 $elasticObject->{$propName} = $propItems['const'];
 
                 continue;
             }
-            if (isset($className::$definition['fields'][$propName]['lang']) == true) {
-                $elasticObject->{$propName} = $object->{$propName};
-            } else {
-                $elasticObject->{$propName} = $object->{$propName};
-            }
+            // Otherwise grab the property directly from the object.
+            $elasticObject->{$propName} = $object->{$propName};
 
         }
 
+        // If the object does not have the date_upd property, use the current date.
         if (!isset($elasticObject->updated_at))
         {
             $elasticObject->updated_at = date('Y-m-d H:i:s');
@@ -188,10 +182,10 @@ abstract class Fetcher
                     ->from(bqSQL(IndexStatus::$definition['table']), 'eis')
                     ->innerJoin(bqSQL((static::$className)::$definition['table']), 'o', 'o.`'.(static::$className)::$definition['primary'].'` = eis.`id_entity`')
                     ->where($idLang ? 'eis.`id_lang` = '.(int) $idLang : '')
-                    ->where('eis.`error` is NULL ')
+                    ->where('eis.`error` is NULL ') // If there is an error, assume that it is not indexed
                     ->where($idShop ? 'eis.`id_shop` = '.(int) $idShop : '')
                     ->where('eis.`index` = "'.bqSQL(static::$indexName).'"')
-                    ->where(isset((static::$className)::$definition['fields']['date_upd']) ? 'eis.`date_upd` = o.`date_upd`'  : '')
+                    ->where(isset((static::$className)::$definition['fields']['date_upd']) ? 'eis.`date_upd` = o.`date_upd`'  : '') // If the object does not have a date_upd field, assume it has not changed
             );
         } catch (\PrestaShopException $e) {
 
@@ -219,27 +213,46 @@ abstract class Fetcher
         $primary = (static::$className)::$definition['primary'];
 
         try {
-            $results = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS(
-                (new DbQuery())
-                    ->select('o.`'.$primary.'`')
-                    ->from(bqSQL(static::$className::$definition['table']), 'o')
-                    ->leftJoin(
-                        bqSQL(IndexStatus::$definition['table']),
-                        'eis',
-                        'o.`'. $primary .'` = eis.`id_entity` AND eis.`index` ="'.bqSQL(static::$indexName).'"'
-                    )
-                    ->where(isset((static::$className)::$definition['fields']['date_upd']) ? 'eis.`error` IS NULL AND (eis.`date_upd`  IS NULL  OR eis.`date_upd` != o.date_upd)'  : 'eis.`date_upd`  IS NULL AND eis.`error` IS NULL' )
-                    ->limit($limit, $offset)
-            );
+            $query = new DbQuery();
+            $query->select('o.`'.$primary.'`, l.`id_lang`, l.`id_shop`')
+                ->from(bqSQL(static::$className::$definition['table']), 'o');
+            // Join with index status and get only updated objects
+            $query->leftJoin(
+                bqSQL(IndexStatus::$definition['table']),
+                'eis',
+                'o.`'. $primary .'` = eis.`id_entity` AND eis.`index` ="'.bqSQL(static::$indexName).'"'
+            )->where(isset((static::$className)::$definition['fields']['date_upd']) ? 'eis.`error` IS NULL AND (eis.`date_upd`  IS NULL  OR eis.`date_upd` != o.date_upd)'  : 'eis.`date_upd`  IS NULL AND eis.`error` IS NULL' ); 
+            $query->limit($limit, $offset);
+            // If multilang, create association to lang table
+            if (!empty(static::$className::$definition['multilang'])) {
+                $query->leftJoin(
+                    static::$className::$definition['table'].'_lang',
+                    'l',
+                    'o.`'.$primary.'` = l.`'.$primary.'`'.($idLang ? ' AND l.`id_lang` = '.(int) $idLang : '').' '.($idShop ? ' AND l.`id_shop` = '.(int) $idShop : '')
+                );
+                if ($idLang) {
+                    $query->where('l.id_lang', '=', (int)$idLang);
+                } else {
+                    $query->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` la ON l.`id_lang` = la.`id_lang` AND la.`active` = 1' : ''); // if idLang is not set fetch all enabled languages
+                }
+            }
+            die((string)$query);
+            $results = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($query);
 
         } catch (\PrestaShopException $e) {
             \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
 
             $results = false;
         }
+
+
+        
+        return $results;
+
+
         $elasticObjects = [];
         foreach ($results as &$result) {
-            $elasticObjects[] = static::initObject($result[$primary], $idLang, $idShop);
+            $elasticObjects[] = static::initObject($result[$primary], $result['id_lang'], $result['id_shop']);
         }
         return $elasticObjects;
     }
@@ -299,7 +312,7 @@ abstract class Fetcher
      * @param ObjectModel $object
      * @return mixed
      */
-    protected static function getLinkRewrite(ObjectModel $object)
+    protected static function getLinkRewrite(ObjectModel $object, $idlang)
     {
         return $object->link_rewrite;
     }
@@ -310,8 +323,7 @@ abstract class Fetcher
      */
     public static function getName($feature)
     {
-
-        return $feature->name;
+        return $elasticObject->{$propName} = $object->{$propName};
     }
 
 

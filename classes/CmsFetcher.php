@@ -67,7 +67,7 @@ class CmsFetcher extends Fetcher
             'function'      => null,
             'type'       => Meta::ELASTIC_TYPE_TEXT,
         ],
-        'slug'              => [
+        'url_key'              => [
             'function'      => [__CLASS__, 'getLinkRewrite'],
             'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
