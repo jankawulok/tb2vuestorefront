@@ -21,6 +21,7 @@ namespace Tb2VueStorefrontModule;
 
 use Collection;
 use Elasticsearch\Endpoints\Index;
+use Tb2VueStorefrontModule\Meta;
 use Logger;
 use PrestaShopException;
 use stdClass;

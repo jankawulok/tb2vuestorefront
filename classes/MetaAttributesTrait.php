@@ -24,6 +24,8 @@ use Configuration;
 use Language;
 use Shop;
 use Tools;
+use Tb2VueStorefrontModule\Fetcher\ProductFetcher;
+use Tb2VueStorefrontModule\Meta;
 
 if (!defined('_PS_VERSION_')) {
     return;

@@ -18,7 +18,7 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace Tb2VueStorefrontModule;
+namespace Tb2VueStorefrontModule\Fetcher;
 
 use AttributeGroup;
 use Category;
@@ -43,6 +43,8 @@ use Shop;
 use stdClass;
 use Tools;
 use StockAvailable;
+use Tb2VueStorefrontModule\Meta;
+use Tb2VueStorefrontModule\Fetcher;
 
 if (!defined('_PS_VERSION_')) {
     return;

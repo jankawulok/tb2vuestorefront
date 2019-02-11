@@ -17,25 +17,27 @@
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 
-namespace Tb2VueStorefrontModule;
+namespace Tb2VueStorefrontModule\Fetcher;
 
-use CMS;
+use CmsCategory;
+use Tb2VueStorefrontModule\Meta;
+use Tb2VueStorefrontModule\Fetcher;
 
 if (!defined('_PS_VERSION_')) {
     return;
 }
 
 /**
- * Class CmsFetcher
+ * Class ReviewFetcher
  *
  * @package Tb2vuestorefrontModule
  */
-class CmsFetcher extends Fetcher
+class CmsCategoryFetcher extends Fetcher
 {
 
-    public static $className = 'CMS';
+    public static $className = 'CMSCategory';
 
-    public static $indexName = 'cms_page';
+    public static $indexName = 'cmscategory';
 
     /**
      * Properties array
@@ -43,35 +45,43 @@ class CmsFetcher extends Fetcher
      * @var array $attributes
      */
     public static $attributes = [
+        'id'                => [
+            'function'      => null,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
+        ],
         'is_active'         => [
             'function'      => [__CLASS__, 'getIsActive'],
-            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
+            'type'          => Meta::ELASTIC_TYPE_BOOLEAN,
         ],
-        'cms_category_id'         => [
-            'function'      => [__CLASS__, 'getCmsCategoryId'],
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+        'parent_id'         => [
+            'function'      => [__CLASS__, 'getParentId'],
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'position'          => [
             'function'      => null,
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'level_depth'       => [
             'function'      => null,
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
-        'title'              => [
-            'function'      => [__CLASS__, 'getTitle'],
-            'type'       => Meta::ELASTIC_TYPE_TEXT,
-        ],
-        'content'           => [
+        'name'              => [
             'function'      => null,
-            'type'       => Meta::ELASTIC_TYPE_TEXT,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
         ],
-        'url_key'              => [
-            'function'      => [__CLASS__, 'getLinkRewrite'],
-            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
+        'description'       => [
+            'function'      => null,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
         ],
-        'identifier'              => [
+        'created_at'        => [
+            'function'      => [__CLASS__, 'getCreatedAt'],
+            'type'          => Meta::ELASTIC_TYPE_DATE,
+        ],
+        'updated_at'        => [
+            'function'      => [__CLASS__, 'getUpdatedAt'],
+            'type'          => Meta::ELASTIC_TYPE_DATE,
+        ],
+        'slug'              => [
             'function'      => [__CLASS__, 'getLinkRewrite'],
             'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
@@ -82,18 +92,12 @@ class CmsFetcher extends Fetcher
     ];
 
     /**
-     * @param CMS $cms
-     * @return mixed
+     * @param CmsCategory $category
+     * @return int
      */
-    protected static function getCmsCategoryId(CMS $cms)
+    protected static function getParentId(CmsCategory $category)
     {
-        return $cms->id_cms_category;
+        return $category->id_parent;
     }
-
-    protected static function getTitle(CMS $cms)
-    {
-        return $cms->name;
-    }
-
 
 }
