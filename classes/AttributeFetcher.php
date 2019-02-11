@@ -19,6 +19,8 @@
 
 namespace Tb2VueStorefrontModule;
 
+use Db;
+use DbQuery;
 use Feature;
 use FeatureValue;
 
@@ -111,21 +113,10 @@ class AttributeFetcher extends Fetcher
 
     ];
 
-
-
-    public static function generateMappings(int $idLang,int $idShop)
-    {
-        $mapping = parent::generateMappings($idShop, $idLang);
-
-
-        return $mapping;
-    }
-
     public static function getIsConfigurable(Feature $feature)
     {
         return 0;
     }
-
 
     /**
      * @param Feature $feature
@@ -152,6 +143,4 @@ class AttributeFetcher extends Fetcher
         return $res;
 
     }
-
-
 }

@@ -31,6 +31,7 @@ use DbQuery;
 use Language;
 use Dispatcher;
 use Context;
+use Shop;
 
 
 if (!defined('_PS_VERSION_')) {
@@ -115,7 +116,7 @@ abstract class Fetcher
      * @throws PrestaShopException
      * @throws \PrestaShopDatabaseException
      */
-    public static function initObject(int $idEntity, ?int $idLang, ?int $idShop)
+    public static function initObject(int $idEntity, int $idLang, int $idShop)
     {
 
         $className = static::$className;
@@ -195,7 +196,6 @@ abstract class Fetcher
         }
     }
 
-
     /**
      * @param int $limit
      * @param int $offset
@@ -204,39 +204,38 @@ abstract class Fetcher
      * @return array
      * @throws PrestaShopException
      */
-    public static function getObjectsToIndex($limit = 0, $offset = 0, $idLang = null, $idShop = null)
+    public static function getObjectsToIndex($limit = 0, $offset = 0, $idLang = null, $idShop = null, $onlyActive = true)
     {
-        // We have to prepare the back office dispatcher, otherwise it will not generate friendly URLs for languages
-        // other than the current language
-        static::prepareDispatcher();
-
         $primary = (static::$className)::$definition['primary'];
 
         try {
+            $isMultilang = !empty(static::$className::$definition['multilang']);
+            $isMultilangShop = !empty(static::$className::$definition['multilang_shop']);
             $query = new DbQuery();
-            $query->select('o.`'.$primary.'`, l.`id_lang`, l.`id_shop`')
-                ->from(bqSQL(static::$className::$definition['table']), 'o');
-            // Join with index status and get only updated objects
-            $query->leftJoin(
-                bqSQL(IndexStatus::$definition['table']),
-                'eis',
-                'o.`'. $primary .'` = eis.`id_entity` AND eis.`index` ="'.bqSQL(static::$indexName).'"'
-            )->where(isset((static::$className)::$definition['fields']['date_upd']) ? 'eis.`error` IS NULL AND (eis.`date_upd`  IS NULL  OR eis.`date_upd` != o.date_upd)'  : 'eis.`date_upd`  IS NULL AND eis.`error` IS NULL' ); 
-            $query->limit($limit, $offset);
+            $query->select('o.`'.$primary.'`, l.`id_lang`, s.`id_shop`')
+                    ->from(bqSQL(static::$className::$definition['table']), 'o')
+                    // Join with index status and get only updated objects
+                    ->join(static::addSqlAssociation(static::$className::$definition['table'], 'o', $idShop))
+                    ->leftJoin(
+                        bqSQL(IndexStatus::$definition['table']),
+                        'eis',
+                        'o.`'. $primary .'` = eis.`id_entity` AND eis.`index` ="'.bqSQL(static::$indexName).'"'
+                    )->where(isset((static::$className)::$definition['fields']['date_upd']) ? 'eis.`error` IS NULL AND (eis.`date_upd`  IS NULL  OR eis.`date_upd` != o.date_upd)'  : 'eis.`date_upd`  IS NULL AND eis.`error` IS NULL' )
+                    ->where($onlyActive ? static::addActiveSqlQuery() : '')
+                    ->limit($limit, $offset);
             // If multilang, create association to lang table
-            if (!empty(static::$className::$definition['multilang'])) {
+            if ($isMultilang) {
                 $query->leftJoin(
                     static::$className::$definition['table'].'_lang',
                     'l',
-                    'o.`'.$primary.'` = l.`'.$primary.'`'.($idLang ? ' AND l.`id_lang` = '.(int) $idLang : '').' '.($idShop ? ' AND l.`id_shop` = '.(int) $idShop : '')
+                    'o.`'.$primary.'` = l.`'.$primary.'`'.($idLang ? ' AND l.`id_lang` = '.(int) $idLang : '').' '.($idShop && $isMultilangShop ? ' AND l.`id_shop` = '.(int) $idShop : '')
                 );
                 if ($idLang) {
                     $query->where('l.id_lang', '=', (int)$idLang);
-                } else {
-                    $query->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` la ON l.`id_lang` = la.`id_lang` AND la.`active` = 1' : ''); // if idLang is not set fetch all enabled languages
                 }
+            } else { // if is not multilang inner join with lang table on all active languages
+                $query->join('INNER JOIN `'._DB_PREFIX_.'lang` l ON l.`active` = 1'.($idLang ? ' AND l.`id_lang` = '.(int) $idLang : '')); 
             }
-            die((string)$query);
             $results = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($query);
 
         } catch (\PrestaShopException $e) {
@@ -245,16 +244,46 @@ abstract class Fetcher
             $results = false;
         }
 
-
-        
-        return $results;
-
-
         $elasticObjects = [];
         foreach ($results as &$result) {
-            $elasticObjects[] = static::initObject($result[$primary], $result['id_lang'], $result['id_shop']);
+            $elasticObjects[] = static::initObject((int)$result[$primary], (int)$result['id_lang'], (int)$result['id_shop']);
         }
         return $elasticObjects;
+    }
+
+    public static function addSqlAssociation($table, $alias, $idShop = null)
+    {
+        $tableAlias = 's';
+        if (strpos($table, '.') !== false) {
+            list($tableAlias, $table) = explode('.', $table);
+        }
+
+        $assoTable = Shop::getAssoTable($table);
+        if ($assoTable === false || $assoTable['type'] != 'shop') {
+            return '';
+        }
+        $sql = 'INNER JOIN '._DB_PREFIX_.$table.'_shop '.$tableAlias.'
+        ON ('.$tableAlias.'.id_'.$table.' = '.$alias.'.id_'.$table;
+
+        if($idShop) {
+            $sql .= ' AND '.$tableAlias.'.id_shop = '.(int)$idShop;
+        }
+
+        $sql .= ')';
+
+        return $sql;
+    }
+
+    public static function addActiveSqlQuery()
+    {
+        if (isset(static::$className::$definition['fields']['active'])) {
+            if (isset(static::$className::$definition['fields']['active']['shop'])) {
+                return 's.`active` = 1';
+            } else {
+                return 'o.`active` = 1';
+            }
+        }
+        return '';
     }
 
     /**
@@ -265,28 +294,33 @@ abstract class Fetcher
      *
      * @return int
      */
-    public static function countObjects($idLang = null, $idShop = null)
+    public static function countObjects($idLang = null, $idShop = null, $onlyActive = true)
     {
-        if (!$idShop) {
-            $idShop = \Shop::getContextShopID();
-        }
-
         try {
-            return (new Collection(static::$className, $idLang))
-                ->count();
+            if (!isset(static::$className) || !class_exists(static::$className)){
+                return 0;
+            }
+            $table = (static::$className)::$definition['table'];
+            return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
+                (new DbQuery())
+                    ->select('COUNT(*)')
+                    ->from($table, 'o')
+                    ->join(static::addSqlAssociation($table, 'o', $idShop))
+                    ->where($onlyActive ? static::addActiveSqlQuery() : '')
+            );
+
         } catch (\PrestaShopException $e) {
+
             \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
 
             return 0;
         }
     }
 
-
     protected static function getCreatedAt(ObjectModel $object)
     {
         return $object->date_add;
     }
-
 
     /**
      * @param ObjectModel $object
@@ -297,7 +331,6 @@ abstract class Fetcher
         return $object->date_upd;
     }
 
-
     /**
      * @param ObjectModel $object
      * @return bool
@@ -306,7 +339,6 @@ abstract class Fetcher
     {
         return (bool)$object->active;
     }
-
 
     /**
      * @param ObjectModel $object
@@ -326,7 +358,6 @@ abstract class Fetcher
         return $elasticObject->{$propName} = $object->{$propName};
     }
 
-
     /**
      * @param ObjectModel $object
      * @return array
@@ -338,79 +369,6 @@ abstract class Fetcher
             'description'  => $object->meta_description,
             'keywords'     => $object->meta_keywords,
         ];
-    }
-
-    /**
-     * By default the dispatcher does not load the default routes for languages that have been deactivated.
-     * This is a problem, because we also want to index languages that are not currently active.
-     * By inserting the routes from inactive languages we can still generate friendly URLs for inactive languages.
-     *
-     * @return void
-     */
-    protected static function prepareDispatcher()
-    {
-        if (static::$dispatcherPrepared) {
-            return;
-        }
-
-        // Set new routes
-        $prodroutes = 'PS_ROUTE_product_rule';
-        $catroutes = 'PS_ROUTE_category_rule';
-        $supproutes = 'PS_ROUTE_supplier_rule';
-        $manuroutes = 'PS_ROUTE_manufacturer_rule';
-        $layeredroutes = 'PS_ROUTE_layered_rule';
-        $cmsroutes = 'PS_ROUTE_cms_rule';
-        $cmscatroutes = 'PS_ROUTE_cms_category_rule';
-        $moduleroutes = 'PS_ROUTE_module';
-        try {
-            foreach (Language::getLanguages(true) as $lang) {
-                foreach (Dispatcher::getInstance()->default_routes as $id => $route) {
-                    switch ($id) {
-                        case 'product_rule':
-                            $rule = Configuration::get($prodroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'category_rule':
-                            $rule = Configuration::get($catroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'supplier_rule':
-                            $rule = Configuration::get($supproutes, (int) $lang['id_lang']);
-                            break;
-                        case 'manufacturer_rule':
-                            $rule = Configuration::get($manuroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'layered_rule':
-                            $rule = Configuration::get($layeredroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'cms_rule':
-                            $rule = Configuration::get($cmsroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'cms_category_rule':
-                            $rule = Configuration::get($cmscatroutes, (int) $lang['id_lang']);
-                            break;
-                        case 'module':
-                            $rule = Configuration::get($moduleroutes, (int) $lang['id_lang']);
-                            break;
-                        default:
-                            $rule = $route['rule'];
-                            break;
-                    }
-
-                    Dispatcher::getInstance()->addRoute(
-                        $id,
-                        $rule,
-                        $route['controller'],
-                        $lang['id_lang'],
-                        $route['keywords'],
-                        isset($route['params']) ? $route['params'] : [],
-                        Context::getContext()->shop->id
-                    );
-                }
-            }
-        } catch (\PrestaShopException $e) {
-            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-        }
-
-        static::$dispatcherPrepared = true;
     }
 
 

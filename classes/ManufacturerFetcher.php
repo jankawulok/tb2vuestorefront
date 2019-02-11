@@ -59,7 +59,7 @@ class ManufacturerFetcher extends Fetcher
             'function'      => null,
             'type'       => Meta::ELASTIC_TYPE_TEXT,
         ],
-        'slug'              => [
+        'url_key'         => [
             'function'      => [__CLASS__, 'getLinkRewrite'],
             'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
@@ -91,8 +91,7 @@ class ManufacturerFetcher extends Fetcher
         ],
 
     ];
-
-
+    
     /**
      * @param Manufacturer $manufacturer
      * @param int $idLang
@@ -103,7 +102,6 @@ class ManufacturerFetcher extends Fetcher
     protected static function getManufacturerLogo(Manufacturer $manufacturer, ?int $idLang)
     {
         return (!file_exists(_PS_MANU_IMG_DIR_.$manufacturer->id.'-'.ImageType::getFormatedName('medium').'.jpg')) ? \Language::getIsoById($idLang).'-default' : $manufacturer->id;
-
     }
 
     /**

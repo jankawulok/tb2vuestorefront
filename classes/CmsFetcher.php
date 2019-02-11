@@ -81,7 +81,6 @@ class CmsFetcher extends Fetcher
 
     ];
 
-
     /**
      * @param CMS $cms
      * @return mixed

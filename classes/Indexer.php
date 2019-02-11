@@ -225,8 +225,9 @@ class Indexer
             ];
 
         }
-//        die(json_encode($results));
         $failed = [];
+
+        // Check error messages
         foreach ($results['items'] as $result) {
             if ((int) substr($result['index']['status'], 0, 1) !== 2) {
                 preg_match(
@@ -247,6 +248,8 @@ class Indexer
                 ];
             }
         }
+
+        // Set error messages if any.
         if (!empty($failed)) {
             foreach ($failed as $failure) {
                 foreach ($objects as $index => $object) {

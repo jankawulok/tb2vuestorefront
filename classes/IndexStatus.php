@@ -121,7 +121,6 @@ class IndexStatus extends \ObjectModel
             $entities = EntityType::getAll(true, $idShop);
             foreach ($entities as $entity) {
                 $count += $entity['class_name']::getIndexed($idLang, $idShop);
-
             }
             return $count;
         } catch (\PrestaShopException $e) {

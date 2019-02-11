@@ -22,17 +22,15 @@ namespace Tb2VueStorefrontModule;
 use TaxRule;
 use TaxRulesGroup;
 use Country;
+use DbQuery;
+use Db;
 
 if (!defined('_PS_VERSION_')) {
     return;
 }
 
 /**
- * Class Fetcher
- *
- * When fetching a product for Elasticsearch indexing, it will call the functions as defined in the
- * `$attributes` array. If the value `null` is used, it will grab the property directly from the
- * thirty bees Category object.
+ * Class TaxruleFetcher
  *
  * @package Tb2vuestorefrontModule
  */
@@ -119,7 +117,6 @@ class TaxruleFetcher extends Fetcher
 
     ];
 
-    
     protected static function getRates(TaxRulesGroup $taxRulesGroup, $idLang)
     {
         $taxRuleRates = TaxRule::getTaxRulesByGroupId($idLang, $taxRulesGroup->id);
@@ -139,6 +136,7 @@ class TaxruleFetcher extends Fetcher
         return $rates;
 
     }
+
     protected static function getRateIds(TaxRulesGroup $taxRulesGroup)
     {
         $tax_rates_ids=[];
@@ -148,12 +146,4 @@ class TaxruleFetcher extends Fetcher
         return $tax_rates_ids;
 
     }
-
-
-
-
-    
-
-
-
 }

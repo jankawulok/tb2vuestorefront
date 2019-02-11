@@ -397,156 +397,6 @@ class ProductFetcher extends Fetcher
     }
 
     /**
-     * This function automatically calls all the attribute function in this
-     * class and returns a "fetched" product with the defined attributes
-     *
-     * @param int $idProduct
-     * @param int $idLang
-     *
-     * @return stdClass
-     * @throws \PrestaShopException
-     */
-    public static function initObject(int $idEntity, ?int $idLang, ?int $idShop)
-    {
-        $elasticProduct = new stdClass();
-        $elasticProduct->id = (int) $idProduct;
-        $product = new Product($idProduct, true, $idLang);
-        if (!\Validate::isLoadedObject($product)) {
-            return $elasticProduct;
-        }
-        $products = [$product];
-        $idLangDefault = (int) Configuration::get('PS_LANG_DEFAULT');
-
-        $metas = [];
-        try {
-            foreach (Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS(
-                (new DbQuery())
-                    ->select('*')
-                    ->from(bqSQL(Meta::$definition['table']))
-            ) as $meta) {
-                $metas[$meta['alias']] = $meta;
-            }
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-        }
-
-        // Default properties
-        $propertyAliases = \Tb2vuestorefront::getAliases(array_keys(static::$attributes));
-        foreach (static::$attributes as $propName => $propItems) {
-            $propAlias = $propertyAliases[$propName];
-            if (!$metas[$propAlias]['enabled'] && !in_array($propName, [
-                $propertyAliases['date_add'],
-                $propertyAliases['date_upd'],
-                $propertyAliases['price_tax_excl'],
-                $propertyAliases['id_tax_rules_group'],
-            ])) {
-                continue;
-            }
-
-            if ($propItems['function'] != null && method_exists($propItems['function'][0], $propItems['function'][1])) {
-                $elasticProduct->{$propAlias} = call_user_func($propItems['function'], $product, $idLang);
-
-                continue;
-            }
-            if (!$propName) {
-                continue;
-            }
-
-            if (isset(Product::$definition[$propName]['lang']) == true) {
-                $elasticProduct->{$propAlias} = $product->{$propName}[$idLang];
-            } else {
-                $elasticProduct->{$propAlias} = $product->{$propName};
-            }
-        }
-
-        // Features
-        try {
-            foreach ($product->getFrontFeatures($idLang) as $feature) {
-                $name = Tools::link_rewrite($feature['name']);
-                if (!$name) {
-                    continue;
-                }
-
-                if ($idLang === $idLangDefault) {
-                    $featureCode = $name;
-                } else {
-                    $frontFeature = array_filter(Product::getFrontFeaturesStatic($idLangDefault, $product->id), function ($item) use ($feature) {
-                        return $item['id_feature'] == $feature['id_feature'];
-                    });
-                    $featureCode = Tools::link_rewrite(current($frontFeature)['name']);
-                }
-                $featureAlias = \Tb2vuestorefront::getAlias($featureCode, 'feature');
-                if (!$metas[$featureAlias]['enabled']) {
-                    continue;
-                }
-
-                $propItems = $feature['value'];
-
-                $elasticProduct->{$featureAlias} = $propItems;
-            }
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-        }
-
-        // Attribute groups
-        try {
-            $attributeGroups = $product->getAttributesGroups($idLang);
-            $groupNames = array_map(function ($attribute) {
-                return Tools::link_rewrite($attribute['group_name']);
-            }, $attributeGroups);
-            $attributeAliases = \Tb2vuestorefront::getAliases($groupNames, 'attribute');
-            if (count($groupNames) === count($attributeAliases)) {
-                foreach (array_combine($attributeAliases, $attributeGroups) as $groupName => $attribute) {
-                    if (!$metas[$groupName]['enabled']) {
-                        continue;
-                    }
-
-                    $attributeName = $attribute['attribute_name'];
-                    if ($idLang === $idLangDefault) {
-                        $attributeCode = $groupName;
-                    } else {
-                        $attributeGroup = new AttributeGroup($attribute['id_attribute_group'], $idLangDefault);
-                        $attributeCode = Tools::link_rewrite($attributeGroup->name);
-                    }
-                    $attributeAlias = \Tb2vuestorefront::getAlias($attributeCode, 'attribute');
-
-                    if (!isset($elasticProduct->{$attributeAlias}) || !is_array($elasticProduct->{$attributeAlias})) {
-                        $elasticProduct->{$attributeAlias} = [];
-                    }
-
-                    if (!in_array($attributeName, $elasticProduct->{$groupName})) {
-                        $elasticProduct->{$attributeAlias}[] = $attributeName;
-                    }
-
-                    if ($attribute['is_color_group']) {
-                        // Add a special property for the color group
-                        // We assume [ yes, we are assuming something, I know :) ] that the color names and color codes
-                        // will eventually be in the same order, so that's how you can match them later
-                        if (!isset($elasticProduct->{"{$attributeAlias}_color_code"}) || !is_array($elasticProduct->{"{$attributeAlias}_color_code"})) {
-                            $elasticProduct->{"{$attributeAlias}_color_code"} = [];
-                        }
-
-                        if (!in_array($attribute['attribute_color'], $elasticProduct->{"{$attributeAlias}_color_code"})) {
-                            $elasticProduct->{"{$attributeAlias}_color_code"}[] = $attribute['attribute_color'];
-                        }
-                    }
-                }
-            }
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-        }
-
-        // Filter metas
-        foreach ($metas as $code => $meta) {
-            if (!$meta['enabled'] && isset(static::$attributes[$code]['visible']) && static::$attributes[$code]['visible']) {
-                unset($elasticProduct->{$meta['alias']});
-            }
-        }
-
-        return $elasticProduct;
-    }
-
-    /**
      * Collect the amount of page views for a product
      *
      * @param Product $product
@@ -646,8 +496,6 @@ class ProductFetcher extends Fetcher
         return '';
     }
 
-
-
     /**
      * Get stock quantity
      */
@@ -702,7 +550,6 @@ class ProductFetcher extends Fetcher
     {
         return (float) static::getProductBasePrice($product->id);
     }
-
 
     /**
      * @param Product $product
@@ -865,7 +712,6 @@ class ProductFetcher extends Fetcher
         return $product->link_rewrite;
     }
 
-
     /**
      * @param Product $product
      * @param $idLang
@@ -884,7 +730,6 @@ class ProductFetcher extends Fetcher
             );
         }
     }
-
 
     /**
      * Get category names
@@ -1005,10 +850,6 @@ class ProductFetcher extends Fetcher
     {
         return [];
     }
-
-
-
-
 
     /**
      * Get supplier name
@@ -1271,192 +1112,5 @@ class ProductFetcher extends Fetcher
         $id_image = $product->getCoverWs($idLang);
         return '/img/p/'.chunk_split($id_image, 1, '/').$id_image.'.jpg';
     }
-
-
-    /**
-     * @param array $products
-     * @param bool  $haveStock
-     *
-     * @return array|bool
-     *
-     * @since   1.0.0
-     * @version 1.0.0 Initial version
-     */
-    protected static function getAttributesColorList(array $products, $haveStock = true, $idLang = null)
-    {
-        if (!count($products)) {
-            return [];
-        }
-
-        if (!$idLang) {
-            $idLang = Context::getContext()->language->id;
-        }
-
-        try {
-            $checkStock = !Configuration::get('PS_DISP_UNAVAILABLE_ATTR');
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            return false;
-        }
-        try {
-            if (!$res = Db::getInstance()->executeS(
-                '
-                SELECT pa.`id_product`, a.`color`, pac.`id_product_attribute`, '.($checkStock ? 'SUM(IF(stock.`quantity` > 0, 1, 0))' : '0').' qty, a.`id_attribute`, al.`name`, IF(color = "", a.id_attribute, color) group_by
-                FROM `'._DB_PREFIX_.'product_attribute` pa
-                '.Shop::addSqlAssociation('product_attribute', 'pa').($checkStock ? Product::sqlStock('pa', 'pa') : '').'
-                JOIN `'._DB_PREFIX_.'product_attribute_combination` pac ON (pac.`id_product_attribute` = product_attribute_shop.`id_product_attribute`)
-                JOIN `'._DB_PREFIX_.'attribute` a ON (a.`id_attribute` = pac.`id_attribute`)
-                JOIN `'._DB_PREFIX_.'attribute_lang` al ON (a.`id_attribute` = al.`id_attribute` AND al.`id_lang` = '.(int) $idLang.')
-                JOIN `'._DB_PREFIX_.'attribute_group` ag ON (a.id_attribute_group = ag.`id_attribute_group`)
-                WHERE pa.`id_product` IN ('.implode(array_map('intval', $products), ',').') AND ag.`is_color_group` = 1
-                GROUP BY pa.`id_product`, a.`id_attribute`, `group_by`
-                '.($checkStock ? 'HAVING qty > 0' : '').'
-                ORDER BY a.`position` ASC;'
-            )
-            ) {
-                return false;
-            }
-        } catch (PrestaShopException $e) {
-            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            return false;
-        }
-
-        $colors = [];
-        foreach ($res as $row) {
-            if (Tools::isEmpty($row['color']) && !@filemtime(_PS_COL_IMG_DIR_.$row['id_attribute'].'.jpg')) {
-                continue;
-            }
-
-            $colors[(int) $row['id_product']][] = [
-                'id_product_attribute' => (int) $row['id_product_attribute'],
-                'color' => $row['color'],
-                'id_product' => $row['id_product'],
-                'name' => $row['name'],
-                'id_attribute' => $row['id_attribute']
-            ];
-        }
-
-        return $colors;
-    }
-
-    /**
-     * Get amount of products for the given shop and lang
-     *
-     * @param int|null $idLang
-     * @param int|null $idShop
-     *
-     * @return int
-     */
-    public static function countObjects($idLang = null, $idShop = null, $onlyActive = true)
-    {
-        if (!$idShop) {
-            $idShop = Shop::getContextShopID();
-        }
-
-        try {
-
-            return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
-                (new DbQuery())
-                    ->select('COUNT(*)')
-                    ->from(bqSQL(Product::$definition['table']).'_shop', 'ps')
-                    ->leftJoin(
-                        bqSQL(Product::$definition['table']).'_lang',
-                        'pl',
-                        'ps.`id_product` = pl.`id_product`'.($idLang ? ' AND pl.`id_lang` = '.(int) $idLang : '').' '.($idShop ? ' AND pl.`id_shop` = '.(int) $idShop : '')
-                    )
-                    ->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` l ON pl.`id_lang` = l.`id_lang` AND l.`active` = 1' : '')
-                    ->where('ps.`id_shop` = '.(int) $idShop)
-                    ->where($onlyActive ? 'ps.`active` = 1' : '')
-            );
-        } catch (\PrestaShopException $e) {
-            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            return 0;
-        }
-    }
-
-    /**
-     * @param int      $limit
-     * @param int      $offset
-     * @param int|null $idLang
-     * @param int|null $idShop
-     *
-     * @return array
-     * @throws \PrestaShopException
-     */
-    public static function getObjectsToIndex($limit = 0, $offset = 0, $idLang = null, $idShop = null, $onlyActive = true)
-    {
-        // We have to prepare the back office dispatcher, otherwise it will not generate friendly URLs for languages
-        // other than the current language
-        static::prepareDispatcher();
-
-        try {
-            $results = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS(
-                (new DbQuery())
-                    ->select('ps.`id_product`, ps.`id_shop`, pl.`id_lang`, ps.`date_upd` AS `product_updated`')
-                    ->select('eis.`date_upd` AS `product_indexed`')
-                    ->from(bqSQL(Product::$definition['table']).'_shop', 'ps')
-                    ->leftJoin(
-                        bqSQL(Product::$definition['table']).'_lang',
-                        'pl',
-                        'pl.`id_product` = ps.`id_product`'.($idLang ? ' AND pl.`id_lang` = '.(int) $idLang : '')
-                    )
-                    ->leftJoin(
-                        bqSQL(IndexStatus::$definition['table']),
-                        'eis',
-                        'ps.`id_product` = eis.`id_entity` AND ps.`id_shop` = eis.`id_shop` AND eis.`id_lang` = pl.`id_lang` AND eis.`error` IS NULL AND eis.`index` = "'. bqSQL(static::$indexName).'"'
-                    )
-                    ->join(!$idLang ? 'INNER JOIN `'._DB_PREFIX_.'lang` l ON pl.`id_lang` = l.`id_lang` AND l.`active` = 1' : '')
-                    ->where($idShop ? 'ps.`id_shop` = '.(int) $idShop : '')
-                    ->where($onlyActive ? 'ps.`active` = 1' : '')
-                    ->where('ps.`date_upd` != eis.`date_upd` OR eis.`date_upd` IS NULL')
-                    ->groupBy('ps.`id_product`, ps.`id_shop`, pl.`id_lang`')
-                    ->limit($limit, $offset)
-            );
-        } catch (\PrestaShopException $e) {
-            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            $results = false;
-        }
-
-        $products = [];
-        foreach ($results as &$result) {
-            $product = static::initObject($result['id_product'], $result['id_lang'], $result['id_shop']);
-
-            $product->elastic_id_lang = $result['id_lang'];
-            $product->elastic_id_shop = $result['id_shop'];
-
-            $products[] = $product;
-        }
-
-        return $products;
-    }
-
-    public static function getIndexed( $idLang = null, $idShop = null)
-    {
-        try {
-            if (!isset(static::$className) || !class_exists(static::$className)){
-                return 0;
-            }
-            return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
-                (new DbQuery())
-                    ->select('COUNT(*)')
-                    ->from(bqSQL(IndexStatus::$definition['table']), 'eis')
-                    ->innerJoin(bqSQL((static::$className)::$definition['table']).'_shop', 'o', 'o.`'.(static::$className)::$definition['primary'].'` = eis.`id_entity` AND o.`id_shop` = eis.`id_shop` AND o.`date_upd` = eis.`date_upd`')
-                    ->where($idLang ? 'eis.`id_lang` = '.(int) $idLang : '')
-                    ->where($idShop ? 'eis.`id_shop` = '.(int) $idShop : '')
-                    ->where('eis.`index` = "'. bqSQL(static::$indexName).'"')
-                    ->where('eis.`error` IS NULL ')
-            );
-        } catch (\PrestaShopException $e) {
-
-            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            return 0;
-        }
-    }
-
 
 }

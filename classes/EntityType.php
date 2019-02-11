@@ -221,7 +221,6 @@ class EntityType extends \ObjectModel
                 ->select('*')
                 ->from(static::$definition['table'])
                 ->where($enabled ? '`enabled` = 1' : '')
-                ->where($idShop ? '`id_shop` = '. (int)$idShop : '')
         );
     }
 

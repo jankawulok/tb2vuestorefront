@@ -150,7 +150,6 @@ trait ModuleAjaxTrait
             } else {
                 break;
             }
-
         }
         if (empty($objects)) {
             // Nothing to index

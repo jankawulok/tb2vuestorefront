@@ -112,6 +112,10 @@ class CategoryFetcher extends Fetcher
             'function'      => [__CLASS__, 'getLinkRewrite'],
             'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
+        'slug'           => [
+            'function'      => [__CLASS__, 'getLinkRewrite'],
+            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
         'request_path'      => [
             'function'      => [__CLASS__, 'getLinkRewrite'],
             'type'       => Meta::ELASTIC_TYPE_TEXT,
@@ -122,14 +126,12 @@ class CategoryFetcher extends Fetcher
 
     ];
 
-    public static function initObject(int $idEntity, ?int $idLang, ?int $idShop)
+    public static function initObject(int $idEntity, int $idLang, int $idShop)
     {
         $elasticObject = parent::initObject($idEntity, $idLang, $idShop);
         static::getChildrenData($elasticObject, $idLang, $idShop);
         return $elasticObject;
     }
-
-
 
     /**
      * @param stdClass $elasticObject
@@ -138,7 +140,7 @@ class CategoryFetcher extends Fetcher
      * @throws PrestaShopException
      * @throws \PrestaShopDatabaseException
      */
-    protected static function getChildrenData(StdClass &$elasticObject, ?int $idLang, ?int $idShop)
+    protected static function getChildrenData(StdClass &$elasticObject, int $idLang, int $idShop)
     {
         $childCats = Category::getChildren($elasticObject->id, $idLang, true);
         $elasticObject->children=[];
@@ -205,7 +207,6 @@ class CategoryFetcher extends Fetcher
         return '';
     }
 
-
     /**
      * @param Category $category
      * @return int
@@ -241,7 +242,6 @@ class CategoryFetcher extends Fetcher
         }
     }
 
-
     /**
      * @param Category $category
      * @return string
@@ -256,83 +256,4 @@ class CategoryFetcher extends Fetcher
         }
         return implode('/', array_reverse($parentCategories));
     }
-
-
-    /**
-     * @param int $limit
-     * @param int $offset
-     * @param null $idLang
-     * @param null $idShop
-     * @return array
-     * @throws PrestaShopException
-     */
-    public static function getObjectsToIndex($limit = 0, $offset = 0, $idLang = null, $idShop = null)
-    {
-        // We have to prepare the back office dispatcher, otherwise it will not generate friendly URLs for languages
-        // other than the current language
-        static::prepareDispatcher();
-
-        $primary = (static::$className)::$definition['primary'];
-
-        try {
-            $results = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS(
-                (new DbQuery())
-                    ->select('o.`'.$primary.'`')
-                    ->from(bqSQL(static::$className::$definition['table']), 'o')
-                    ->join(Shop::addSqlAssociation('category', 'o'))
-                    ->leftJoin(
-                        bqSQL(IndexStatus::$definition['table']),
-                        'eis',
-                        'o.`'. $primary .'` = eis.`id_entity` AND eis.`index` ="'.bqSQL(static::$indexName).'"'
-                    )
-                    ->where('o.`id_parent` != 0')
-                    ->where(isset((static::$className)::$definition['fields']['date_upd']) ? 'eis.`error` IS NULL AND (eis.`date_upd`  IS NULL  OR eis.`date_upd` != o.date_upd)'  : 'eis.`date_upd`  IS NULL AND eis.`error` IS NULL' )
-                    ->limit($limit, $offset)
-            );
-
-        } catch (\PrestaShopException $e) {
-            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            $results = false;
-        }
-        $elasticObjects = [];
-        foreach ($results as &$result) {
-            $elasticObjects[] = static::initObject($result[$primary], $idLang, $idShop);
-        }
-        return $elasticObjects;
-    }
-
-    /**
-     * Get amount of products for the given shop and lang
-     *
-     * @param int|null $idLang
-     * @param int|null $idShop
-     *
-     * @return int
-     */
-    public static function countObjects($idLang = null, $idShop = null)
-    {
-        if (!$idShop) {
-            $idShop = \Shop::getContextShopID();
-        }
-
-        try {
-            return Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
-                (new DbQuery())
-                    ->select('COUNT(*)')
-                    ->from('category', 'c')
-                    ->join(Shop::addSqlAssociation('category', 'c'))
-                    ->where('c.`id_parent` != 0')
-                    ->orderBy('c.`id_category`, category_shop.`position`')
-            );
-        } catch (\PrestaShopException $e) {
-            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
-
-            return 0;
-        }
-    }
-
-    
-
-
 }
