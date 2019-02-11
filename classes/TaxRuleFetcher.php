@@ -74,7 +74,7 @@ class TaxruleFetcher extends Fetcher
         ],
         'rates'=> [
             'function'      => [__CLASS__, 'getRates'],
-            'children_mappings'      => [
+            'children'      => [
                 'id' => [
                     'type' => Meta::ELASTIC_TYPE_INTEGER,
                 ],
