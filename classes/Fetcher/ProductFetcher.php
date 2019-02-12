@@ -25,6 +25,7 @@ use Category;
 use Configuration;
 use Collection;
 use Group;
+use Feature;
 use Context;
 use Customer;
 use Db;
@@ -396,6 +397,24 @@ class ProductFetcher extends Fetcher
         }
         
         return $mapping;
+    }
+
+    public static function initObject(int $idEntity, int $idLang, int $idShop)
+    {
+        $elasticObject = parent::initObject($idEntity, $idLang, $idShop)
+
+        // Features
+        try {
+            $product = new Product($idEntity, $idLang, $idShop);
+            foreach ($product->getFeatures() as $feature) {
+                $f = new Feature((int)$feature['id_feature'], $this->idLang);
+                $productDTO[str_replace(' ','_',mb_strtolower($f->name))  ]=(int)$feature['id_feature_value'];
+        }
+        } catch (PrestaShopException $e) {
+            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+        }
+
+        return $elasticProduct;
     }
 
     /**

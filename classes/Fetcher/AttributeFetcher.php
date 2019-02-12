@@ -66,7 +66,7 @@ class AttributeFetcher extends Fetcher
             'type'       => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'attribute_code'    => [
-            'function'      => [__CLASS__, 'getName'],
+            'function'      => [__CLASS__, 'getCode'],
             'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
         'frontend_input'    => [
@@ -118,6 +118,11 @@ class AttributeFetcher extends Fetcher
     public static function getIsConfigurable(Feature $feature)
     {
         return 0;
+    }
+
+    protected static function getCode(Feature $feature, $idLang)
+    {
+        return str_replace(' ','_',mb_strtolower($feature->name))
     }
 
     /**
