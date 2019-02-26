@@ -291,13 +291,17 @@ class ProductFetcher extends Fetcher
                 Meta::ELASTIC_TYPE_INTEGER,
             ],
         ],
-        'manufacturer'            => [
+        'manufacturer_name'            => [
             'function'      => [__CLASS__, 'getManufacturerName'],
             'type'       => Meta::ELASTIC_TYPE_TEXT,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_KEYWORD,
                 Meta::ELASTIC_TYPE_TEXT,
             ],
+        ],
+        'manufacturer_agg'            => [
+            'function'      => [__CLASS__, 'getManufacturerName'],
+            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
         'minimal_quantity'        => [
             'function'      => [__CLASS__, 'getMinimalQuantity'],
@@ -388,12 +392,14 @@ class ProductFetcher extends Fetcher
     public static function generateMappings(int $idLang,int $idShop)
     {
         $mapping = parent::generateMappings($idLang, $idShop);
-        $attributes =  (new Collection('AttributeGroup', $idLang))
-        ->getResults();
+        $attributes = Feature::getFeatures($idLang);
         foreach ($attributes as &$result) {
-            $mapping["properties"][$result->name] = [
-                'type' => META::ELASTIC_TYPE_INTEGER,
-            ];
+            $attributeName = str_replace(' ','_',mb_strtolower($result['name']));
+            if (!array_key_exists($mapping["properties"][$attributeName])) {
+                $mapping["properties"][$attributeName] = [
+                    'type' => META::ELASTIC_TYPE_INTEGER,
+                ];
+            }
         }
         
         return $mapping;
@@ -401,20 +407,22 @@ class ProductFetcher extends Fetcher
 
     public static function initObject(int $idEntity, int $idLang, int $idShop)
     {
-        $elasticObject = parent::initObject($idEntity, $idLang, $idShop)
+        $elasticObject = parent::initObject($idEntity, $idLang, $idShop);
 
         // Features
         try {
-            $product = new Product($idEntity, $idLang, $idShop);
-            foreach ($product->getFeatures() as $feature) {
-                $f = new Feature((int)$feature['id_feature'], $this->idLang);
-                $productDTO[str_replace(' ','_',mb_strtolower($f->name))  ]=(int)$feature['id_feature_value'];
-        }
+            foreach (Product::getFeaturesStatic($idEntity) as $feature) {
+                $f = new Feature((int)$feature['id_feature'], $idLang);
+                $featureName = str_replace(' ','_',mb_strtolower($f->name));
+                if (!isset($elasticObject->{$featureName})) {
+                    $elasticObject->{$featureName} = (int)$feature['id_feature_value'];
+                }
+            }
         } catch (PrestaShopException $e) {
             Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
         }
 
-        return $elasticProduct;
+        return $elasticObject;
     }
 
     /**

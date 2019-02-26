@@ -354,9 +354,9 @@ abstract class Fetcher
      * @param  $feature
      * @return string
      */
-    public static function getName($feature)
+    public static function getName(ObjectModel $object, $idlang)
     {
-        return $elasticObject->{$propName} = $object->{$propName};
+        return $object->name;
     }
 
     /**

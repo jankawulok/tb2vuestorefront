@@ -40,7 +40,7 @@ class TaxruleFetcher extends Fetcher
 {
     // @var TaxRulesGroup $className
     public static $className = 'TaxRulesGroup';
-    public static $indexName = 'taxrules';
+    public static $indexName = 'taxrule';
 
     // Cached category paths
     static $cachedParentCategories = [];
@@ -108,16 +108,26 @@ class TaxruleFetcher extends Fetcher
         'tax_rates_ids'=> [
             'function'      => [__CLASS__, 'getRateIds'],
         ],
+        'id'                => [
+            'function'      => null,
+            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+        ],
         'created_at'        => [
             'function'      => [__CLASS__, 'getCreatedAt'],
             'type'       => Meta::ELASTIC_TYPE_DATE,
         ],
-        'updated_at'        => [
-            'function'      => [__CLASS__, 'getUpdatedAt'],
-            'type'       => Meta::ELASTIC_TYPE_DATE,
+        'product_tax_class_ids'        => [
+            'function'      => [__CLASS__, 'getProductTaxClassIds'],
+            'type'       => Meta::ELASTIC_TYPE_INTEGER,
         ],
 
     ];
+
+    protected static function getProductTaxClassIds(TaxRulesGroup $taxRulesGroup)
+    {
+        return [$taxRulesGroup->id];
+
+    }
 
     protected static function getRates(TaxRulesGroup $taxRulesGroup, $idLang)
     {
@@ -126,7 +136,8 @@ class TaxruleFetcher extends Fetcher
         foreach ($taxRuleRates as $taxRateId) {
             $rates[]=array(
                 'tax_country_id' => Country::getIsoById($taxRateId['id_country']),
-                'tax_region_id'  => $taxRateId['id_country'],
+                // 'tax_region_id'  => $taxRateId['id_country'],
+                'tax_region_id'  => 0,
                 'rate'           => $taxRateId['rate'],
                 'tax_postcode'   => '*',
                 'zip_is_range'   => null,

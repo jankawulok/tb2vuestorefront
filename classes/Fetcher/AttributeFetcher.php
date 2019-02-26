@@ -70,11 +70,11 @@ class AttributeFetcher extends Fetcher
             'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
         'frontend_input'    => [
-            'function'      => null,
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'function'      => [__CLASS__, 'getFrontendInput'],
+            'type'       => Meta::ELASTIC_TYPE_TEXT,
         ],
         'frontend_label'    => [
-            'function'      => [__CLASS__, 'getName'],
+            'function'      => [__CLASS__, 'getFrontendLabel'],
             'type'       => Meta::ELASTIC_TYPE_TEXT,
         ],
         'position'          => [
@@ -82,24 +82,24 @@ class AttributeFetcher extends Fetcher
             'type'       => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'is_searchable'     => [
-            'const'      => 1,
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'const'      => true,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
         ],
         'is_filterable'     => [
-            'const'      => 1,
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'const'      => true,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
         ],
         'is_comparable'     => [
-            'const'      => 1,
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'const'      => true,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
         ],
         'is_visible_on_front'=> [
-            'const'      => 1,
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'const'      => true,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
         ],
         'is_configurable'   => [
-            'function'      => [__CLASS__, 'getIsConfigurable'],
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'const'      => true,
+            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
         ],
         'frontend_input_renderer' => [
             'function'      => [__CLASS__, 'getName'],
@@ -122,7 +122,17 @@ class AttributeFetcher extends Fetcher
 
     protected static function getCode(Feature $feature, $idLang)
     {
-        return str_replace(' ','_',mb_strtolower($feature->name))
+        return str_replace(' ','_',mb_strtolower($feature->name));
+    }
+
+    protected static function getFrontendLabel(Feature $feature)
+    {
+        return $feature->name;
+    }
+
+    protected static function getFrontendInput(Feature $feature)
+    {
+        return 'select';
     }
 
     /**
