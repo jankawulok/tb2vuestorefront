@@ -758,6 +758,7 @@ class ProductFetcher extends Fetcher
                 'name'         => $category->name
             );
         }
+        return $categories;
     }
 
     /**
