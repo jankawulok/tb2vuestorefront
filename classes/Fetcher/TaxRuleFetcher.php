@@ -120,6 +120,10 @@ class TaxruleFetcher extends Fetcher
             'function'      => [__CLASS__, 'getProductTaxClassIds'],
             'type'       => Meta::ELASTIC_TYPE_INTEGER,
         ],
+        'updated_at'        => [
+            'function'      => [__CLASS__, 'getUpdatedAt'],
+            'type'          => Meta::ELASTIC_TYPE_DATE,
+        ],
 
     ];
 
