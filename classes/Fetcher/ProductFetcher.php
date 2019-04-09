@@ -1158,16 +1158,6 @@ class ProductFetcher extends Fetcher
     public static function getIndexed( $idLang = null, $idShop = null)
     {
         try {
-            return (string)(new DbQuery())
-                    ->select('COUNT(*)')
-                    ->from(bqSQL(IndexStatus::$definition['table']), 'eis')
-                    ->innerJoin(bqSQL((static::$className)::$definition['table']), 'o', 'o.`'.(static::$className)::$definition['primary'].'` = eis.`id_entity`')
-                    ->join(Shop::addSqlAssociation('product', 'o'))
-                    ->where($idLang ? 'eis.`id_lang` = '.(int) $idLang : '')
-                    ->where('eis.`error` is NULL ') // If there is an error, assume that it is not indexed
-                    ->where($idShop ? 'eis.`id_shop` = '.(int) $idShop : '')
-                    ->where('eis.`index` = "'.bqSQL(static::$indexName).'"')
-                    ->where('eis.`date_upd` = product_shop.`date_upd`' );
             if (!isset(static::$className) || !class_exists(static::$className)){
                 return 0;
             }
@@ -1189,6 +1179,54 @@ class ProductFetcher extends Fetcher
 
             return 0;
         }
+    }
+
+    public static function getObjectsToIndex($limit = 0, $offset = 0, $idLang = null, $idShop = null, $onlyActive = true)
+    {
+        $primary = (static::$className)::$definition['primary'];
+
+        try {
+            $isMultilang = !empty(static::$className::$definition['multilang']);
+            $isMultilangShop = !empty(static::$className::$definition['multilang_shop']);
+            $query = new DbQuery();
+            $query->select('o.`'.$primary.'`, l.`id_lang`, s.`id_shop`')
+                    ->from(bqSQL(static::$className::$definition['table']), 'o')
+                    // Join with index status and get only updated objects
+                    ->join(static::addSqlAssociation(static::$className::$definition['table'], 'o', $idShop))
+                    ->join(Shop::addSqlAssociation('product', 'o'))
+                    ->leftJoin(
+                        bqSQL(IndexStatus::$definition['table']),
+                        'eis',
+                        'o.`'. $primary .'` = eis.`id_entity` AND eis.`index` ="'.bqSQL(static::$indexName).'"'
+                    )->where(isset((static::$className)::$definition['fields']['date_upd']) ? 'eis.`error` IS NULL AND (eis.`date_upd`  IS NULL  OR eis.`date_upd` != product_shop.date_upd)'  : 'eis.`date_upd`  IS NULL AND eis.`error` IS NULL' )
+                    ->where($onlyActive ? static::addActiveSqlQuery() : '')
+                    ->limit($limit, $offset);
+            // If multilang, create association to lang table
+            if ($isMultilang) {
+                $query->leftJoin(
+                    static::$className::$definition['table'].'_lang',
+                    'l',
+                    'o.`'.$primary.'` = l.`'.$primary.'`'.($idLang ? ' AND l.`id_lang` = '.(int) $idLang : '').' '.($idShop && $isMultilangShop ? ' AND l.`id_shop` = '.(int) $idShop : '')
+                );
+                if ($idLang) {
+                    $query->where('l.id_lang', '=', (int)$idLang);
+                }
+            } else { // if is not multilang inner join with lang table on all active languages
+                $query->join('INNER JOIN `'._DB_PREFIX_.'lang` l ON l.`active` = 1'.($idLang ? ' AND l.`id_lang` = '.(int) $idLang : '')); 
+            }
+            $results = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($query);
+
+        } catch (\PrestaShopException $e) {
+            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+            $results = false;
+        }
+
+        $elasticObjects = [];
+        foreach ($results as &$result) {
+            $elasticObjects[] = static::initObject((int)$result[$primary], (int)$result['id_lang'], (int)$result['id_shop']);
+        }
+        return $elasticObjects;
     }
 
 }
