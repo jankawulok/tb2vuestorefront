@@ -21,8 +21,8 @@ namespace Tb2VueStorefrontModule\Fetcher;
 
 use Db;
 use DbQuery;
-use Feature;
-use FeatureValue;
+use AttributeGroup;
+use Attribute;
 use Tb2VueStorefrontModule\Meta;
 use Tb2VueStorefrontModule\Fetcher;
 
@@ -42,14 +42,8 @@ if (!defined('_PS_VERSION_')) {
 class AttributeFetcher extends Fetcher
 {
 
-    public static $className = 'Feature';
+    public static $className = 'AttributeGroup';
     public static $indexName = 'attribute';
-
-    // Cached category paths
-    static $cachedParentCategories = [];
-
-    // Avoid these categories (root and home)
-    static $avoidCategories = null;
 
     /**
      * Properties array
@@ -115,22 +109,22 @@ class AttributeFetcher extends Fetcher
 
     ];
 
-    public static function getIsConfigurable(Feature $feature)
+    public static function getIsConfigurable(AttributeGroup $feature)
     {
         return 0;
     }
 
-    protected static function getCode(Feature $feature, $idLang)
+    protected static function getCode(AttributeGroup $feature, $idLang)
     {
         return str_replace(' ','_',mb_strtolower($feature->name));
     }
 
-    protected static function getFrontendLabel(Feature $feature)
+    protected static function getFrontendLabel(AttributeGroup $feature)
     {
         return $feature->name;
     }
 
-    protected static function getFrontendInput(Feature $feature)
+    protected static function getFrontendInput(AttributeGroup $feature)
     {
         return 'select';
     }
@@ -142,10 +136,10 @@ class AttributeFetcher extends Fetcher
      * @throws \PrestaShopDatabaseException
      * @throws \PrestaShopException
      */
-    protected static function getOptions(Feature $feature, $idLang)
+    protected static function getOptions(AttributeGroup $feature, $idLang)
     {
         try {
-            $options = FeatureValue::getFeatureValuesWithLang($idLang, $feature->id);
+            $options = AttributeGroup::getAttributes($idLang, $feature->id);
         } catch (\PrestaShopException $e) {
             \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
             return [];
@@ -153,8 +147,8 @@ class AttributeFetcher extends Fetcher
         $res=[];
         foreach ($options as $option) {
             $res[] = [
-                'value' => (int)$option['id_feature_value'],
-                'label' => (string)$option['value'],
+                'value' => (int)$option['id_attribute'],
+                'label' => (string)$option['name'],
             ];
         }
         return $res;

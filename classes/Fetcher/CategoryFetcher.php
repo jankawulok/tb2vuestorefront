@@ -118,6 +118,10 @@ class CategoryFetcher extends Fetcher
             'function'      => [__CLASS__, 'getLinkRewrite'],
             'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
+        'url_key'           => [
+            'function'      => [__CLASS__, 'getLinkRewrite'],
+            'type'          => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
         'request_path'      => [
             'function'      => [__CLASS__, 'getLinkRewrite'],
             'type'       => Meta::ELASTIC_TYPE_TEXT,

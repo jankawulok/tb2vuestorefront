@@ -190,6 +190,10 @@ class ProductFetcher extends Fetcher
             'function'      => [__CLASS__, 'getRequestPath'],
             'type'          => Meta::ELASTIC_TYPE_KEYWORD,
         ],
+        'url_key'           => [
+            'function'      => [__CLASS__, 'getRequestPath'],
+            'type'          => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
         'description'       => [
             'function'      => null,
             'type'          => Meta::ELASTIC_TYPE_TEXT,
@@ -397,7 +401,7 @@ class ProductFetcher extends Fetcher
             $attributeName = str_replace(' ','_',mb_strtolower($result['name']));
             if (!array_key_exists($mapping["properties"][$attributeName])) {
                 $mapping["properties"][$attributeName] = [
-                    'type' => META::ELASTIC_TYPE_INTEGER,
+                    'type' => META::ELASTIC_TYPE_KEYWORD,
                 ];
             }
         }
@@ -411,11 +415,10 @@ class ProductFetcher extends Fetcher
 
         // Features
         try {
-            foreach (Product::getFeaturesStatic($idEntity) as $feature) {
-                $f = new Feature((int)$feature['id_feature'], $idLang);
-                $featureName = str_replace(' ','_',mb_strtolower($f->name));
+            foreach (Product::getFrontFeaturesStatic($idLang, $idEntity) as $feature) {
+                $featureName = str_replace(' ','_',mb_strtolower($feature['name']));
                 if (!isset($elasticObject->{$featureName})) {
-                    $elasticObject->{$featureName} = (int)$feature['id_feature_value'];
+                    $elasticObject->{$featureName} = array_map('trim', explode(",", $feature['value']));
                 }
             }
         } catch (PrestaShopException $e) {
