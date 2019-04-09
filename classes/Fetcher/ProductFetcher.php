@@ -46,6 +46,7 @@ use Tools;
 use StockAvailable;
 use Tb2VueStorefrontModule\Meta;
 use Tb2VueStorefrontModule\Fetcher;
+use Tb2VueStorefrontModule\IndexStatus;
 
 if (!defined('_PS_VERSION_')) {
     return;
@@ -1144,6 +1145,50 @@ class ProductFetcher extends Fetcher
     {
         $id_image = $product->getCoverWs($idLang);
         return '/img/p/'.chunk_split($id_image, 1, '/').$id_image.'.jpg';
+    }
+
+    /**
+     * @param EntityType|null $index
+     * @param null $idLang
+     * @param null $idShop
+     * @return int
+     * @throws \PrestaShopDatabaseException
+     * @throws \PrestaShopException
+     */
+    public static function getIndexed( $idLang = null, $idShop = null)
+    {
+        try {
+            return (string)(new DbQuery())
+                    ->select('COUNT(*)')
+                    ->from(bqSQL(IndexStatus::$definition['table']), 'eis')
+                    ->innerJoin(bqSQL((static::$className)::$definition['table']), 'o', 'o.`'.(static::$className)::$definition['primary'].'` = eis.`id_entity`')
+                    ->join(Shop::addSqlAssociation('product', 'o'))
+                    ->where($idLang ? 'eis.`id_lang` = '.(int) $idLang : '')
+                    ->where('eis.`error` is NULL ') // If there is an error, assume that it is not indexed
+                    ->where($idShop ? 'eis.`id_shop` = '.(int) $idShop : '')
+                    ->where('eis.`index` = "'.bqSQL(static::$indexName).'"')
+                    ->where('eis.`date_upd` = product_shop.`date_upd`' );
+            if (!isset(static::$className) || !class_exists(static::$className)){
+                return 0;
+            }
+            return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue(
+                (new DbQuery())
+                    ->select('COUNT(*)')
+                    ->from(bqSQL(IndexStatus::$definition['table']), 'eis')
+                    ->innerJoin(bqSQL((static::$className)::$definition['table']), 'o', 'o.`'.(static::$className)::$definition['primary'].'` = eis.`id_entity`')
+                    ->join(Shop::addSqlAssociation('product', 'o'))
+                    ->where($idLang ? 'eis.`id_lang` = '.(int) $idLang : '')
+                    ->where('eis.`error` is NULL ') // If there is an error, assume that it is not indexed
+                    ->where($idShop ? 'eis.`id_shop` = '.(int) $idShop : '')
+                    ->where('eis.`index` = "'.bqSQL(static::$indexName).'"')
+                    ->where('eis.`date_upd` = product_shop.`date_upd`' ) // If the object does not have a date_upd field, assume it has not changed
+            );
+        } catch (\PrestaShopException $e) {
+
+            \Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+            return 0;
+        }
     }
 
 }
