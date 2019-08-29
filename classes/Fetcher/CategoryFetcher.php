@@ -67,66 +67,66 @@ class CategoryFetcher extends Fetcher
     public static $attributes = [
         'id'                => [
             'function'      => null,
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'parent_id'         => [
             'function'      => [__CLASS__, 'getParentId'],
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'name'              => [
             'function'      => null,
-            'type'       => Meta::ELASTIC_TYPE_TEXT,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
         ],
         'position'          => [
             'function'      => null,
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'level'             => [
             'function'      => [__CLASS__, 'getLevelDepth'],
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'product_count'     => [
             'function'      => [__CLASS__, 'getProductCount'],
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'created_at'        => [
             'function'      => [__CLASS__, 'getCreatedAt'],
-            'type'       => Meta::ELASTIC_TYPE_DATE,
+            'type'          => Meta::ELASTIC_TYPE_DATE,
         ],
         'updated_at'        => [
             'function'      => [__CLASS__, 'getUpdatedAt'],
-            'type'       => Meta::ELASTIC_TYPE_DATE,
+            'type'          => Meta::ELASTIC_TYPE_DATE,
         ],
         'path'              => [
             'function'      => [__CLASS__, 'getPath'],
-            'type'       => Meta::ELASTIC_TYPE_TEXT,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
         ],
         'include_in_menu'   => [
             'function'      => null,
             'const'         => '1',
-            'type'       => Meta::ELASTIC_TYPE_INTEGER,
+            'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'is_active'         => [
             'function'      => [__CLASS__, 'getIsActive'],
-            'type'       => Meta::ELASTIC_TYPE_BOOLEAN,
-        ],
-        'url_key'           => [
-            'function'      => [__CLASS__, 'getLinkRewrite'],
-            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
-        ],
-        'slug'           => [
-            'function'      => [__CLASS__, 'getLinkRewrite'],
-            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
+            'type'          => Meta::ELASTIC_TYPE_BOOLEAN,
         ],
         'url_key'           => [
             'function'      => [__CLASS__, 'getLinkRewrite'],
             'type'          => Meta::ELASTIC_TYPE_KEYWORD,
         ],
+        'slug'              => [
+            'function'      => [__CLASS__, 'getLinkRewrite'],
+            'type'          => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
+        'url_path'          => [
+            'function'      => [__CLASS__, 'getLinkRewrite'],
+            'type'          => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
         'request_path'      => [
             'function'      => [__CLASS__, 'getLinkRewrite'],
-            'type'       => Meta::ELASTIC_TYPE_TEXT,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
         ],
-        'meta'           => [
+        'meta'              => [
             'function'      => [__CLASS__, 'getMeta'],
         ],
 

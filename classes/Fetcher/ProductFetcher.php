@@ -191,7 +191,7 @@ class ProductFetcher extends Fetcher
             'function'      => [__CLASS__, 'getRequestPath'],
             'type'          => Meta::ELASTIC_TYPE_KEYWORD,
         ],
-        'url_key'           => [
+        'url_path'          => [
             'function'      => [__CLASS__, 'getRequestPath'],
             'type'          => Meta::ELASTIC_TYPE_KEYWORD,
         ],
@@ -1073,7 +1073,7 @@ class ProductFetcher extends Fetcher
             'product_id'  => $product->id,
             'stock_id'    => $stockAvailable->id,
             'qty'         => $stockAvailable->quantity,
-            'is_in_stock' => 1,
+            'is_in_stock' => (int)(bool)$stockAvailable->quantity,
             'is_qty_decimal' => true,
             'show_default_notification_message' => false,
             'use_config_min_qty' => false,
