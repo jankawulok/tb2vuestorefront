@@ -84,13 +84,144 @@ abstract class Fetcher
                     'type' => $propItems['type'],
                 ];
             }
+            if ($propItems['type'] === 'text') {
+                $properties[$propName] = [
+                    'type' => $propItems['type'],
+                    'fields' => [
+                        'trigram' => [
+                            'type'  => 'text',
+                            'analyzer'  => 'trigram',
+                        ],
+                        'reverse' => [
+                            'type'  => 'text',
+                            'analyzer'  => 'reverse',
+                        ],
+                        'lang_pl' => [
+                            'analyzer'  => 'lang_pl',
+                            'type'      => 'text'
+                        ],
+                        'lang_pl_ascii' => [
+                            'analyzer'  => 'lang_pl_ascii',
+                            'type'      => 'text'
+                        ],
+                        'lang_pl_trigram' => [
+                            'analyzer'  => 'lang_pl_trigram',
+                            'type'      => 'text'
+                        ],
+                        'autocomplete' => [
+                            'analyzer'  => 'autocomplete',
+                            'search_analyzer'  => 'autocomplete_search',
+                            'type'      => 'text'
+                        ],
+                    ],
+                ];
+            }
+            if ($propItems['type'] === 'keyword') {
+                $properties[$propName] = [
+                    'type' => $propItems['type'],
+                    'fields' => [
+                        'trigram' => [
+                            'type'  => 'text',
+                            'analyzer'  => 'trigram',
+                        ],
+                        'reverse' => [
+                            'type'  => 'text',
+                            'analyzer'  => 'reverse',
+                        ],
+                        'lang_pl' => [
+                            'analyzer'  => 'lang_pl',
+                            'type'      => 'text'
+                        ],
+                        'lang_pl_ascii' => [
+                            'analyzer'  => 'lang_pl_ascii',
+                            'type'      => 'text'
+                        ],
+                        'lang_pl_trigram' => [
+                            'analyzer'  => 'lang_pl_trigram',
+                            'type'      => 'text'
+                        ],
+                        'autocomplete' => [
+                            'analyzer'  => 'autocomplete',
+                            'search_analyzer'  => 'autocomplete_search',
+                            'type'      => 'text'
+                        ],
+                    ],
+                ];
+            }
             if ($propItems['type'] === 'date') {
                 $properties[$propName]['format'] = 'yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis';
             }
             if (isset($propItems['children']))
             {
+                $properties[$propName]=[];
                 foreach ($propItems['children'] as $childrenName => $childrenItems) {
-                    $properties[$propName]['properties'][$childrenName]['type'] = $childrenItems['type'];
+                    $properties[$propName]['properties'][$childrenName] = [
+                        'type' => $childrenItems['type']
+                    ];
+                    if ($childrenItems['type'] === 'text') {
+                        $properties[$propName]['properties'][$childrenName] = [
+                            'type' => $childrenItems['type'],
+                            'fields' => [
+                                'trigram' => [
+                                    'type'  => 'text',
+                                    'analyzer'  => 'trigram',
+                                ],
+                                'reverse' => [
+                                    'type'  => 'text',
+                                    'analyzer'  => 'reverse',
+                                ],
+                                'lang_pl' => [
+                                    'analyzer'  => 'lang_pl',
+                                    'type'      => 'text'
+                                ],
+                                'lang_pl_ascii' => [
+                                    'analyzer'  => 'lang_pl_ascii',
+                                    'type'      => 'text'
+                                ],
+                                'lang_pl_trigram' => [
+                                    'analyzer'  => 'lang_pl_trigram',
+                                    'type'      => 'text'
+                                ],
+                                'autocomplete' => [
+                                    'analyzer'  => 'autocomplete',
+                                    'search_analyzer'  => 'autocomplete_search',
+                                    'type'      => 'text'
+                                ],
+                            ],
+                        ];
+                    }
+                    if ($childrenItems['type'] === 'keyword') {
+                        $properties[$propName]['properties'][$childrenName]= [
+                            'type' => $childrenItems['type'],
+                            'fields' => [
+                                'trigram' => [
+                                    'type'  => 'text',
+                                    'analyzer'  => 'trigram',
+                                ],
+                                'reverse' => [
+                                    'type'  => 'text',
+                                    'analyzer'  => 'reverse',
+                                ],
+                                'lang_pl' => [
+                                    'analyzer'  => 'lang_pl',
+                                    'type'      => 'text'
+                                ],
+                                'lang_pl_ascii' => [
+                                    'analyzer'  => 'lang_pl_ascii',
+                                    'type'      => 'text'
+                                ],
+                                'lang_pl_trigram' => [
+                                    'analyzer'  => 'lang_pl_trigram',
+                                    'type'      => 'text'
+                                ],
+                                'autocomplete' => [
+                                    'analyzer'  => 'autocomplete',
+                                    'search_analyzer'  => 'autocomplete_search',
+                                    'type'      => 'text'
+                                ],
+                            ],
+                        ];
+                    }
                     if ($properties[$propName]['properties'][$childrenName]['type'] === 'date') {
                         $properties[$propName]['properties'][$childrenName]['format'] = 'yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis';
                     }

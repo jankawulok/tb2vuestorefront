@@ -129,6 +129,10 @@ class CategoryFetcher extends Fetcher
         'meta'              => [
             'function'      => [__CLASS__, 'getMeta'],
         ],
+        'filters'          => [
+            'function'      => [__CLASS__, 'getFilters'],
+            'type'          => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
 
     ];
 
@@ -220,6 +224,11 @@ class CategoryFetcher extends Fetcher
     protected static function getParentId(Category $category)
     {
         return (int)$category->id_parent;
+    }
+
+    protected static function getFilters(Category $category)
+    {
+        return array_map('trim', explode(",", $category->meta_keywords));
     }
 
     /**

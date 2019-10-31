@@ -91,12 +91,44 @@ class ProductFetcher extends Fetcher
             'function'      => null,
             'type'          => Meta::ELASTIC_TYPE_TEXT,
         ],
+        'name_autocomplete' => [
+            'function'      => [__CLASS__, 'getNameAutocomplete'],
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
+        ],
         'attribute_set_id'  => [
             'static'        => 0,
             'type'          => Meta::ELASTIC_TYPE_INTEGER,
         ],
         'price'             => [
             'function'      => [__CLASS__, 'getPriceTaxExcl'],
+            'type'          => Meta::ELASTIC_TYPE_FLOAT,
+            'elastic_types' => [
+                Meta::ELASTIC_TYPE_FLOAT,
+            ],
+        ],
+        'special_price'     => [
+            'function'      => [__CLASS__, 'getSpecialPrice'],
+            'type'          => Meta::ELASTIC_TYPE_FLOAT,
+            'elastic_types' => [
+                Meta::ELASTIC_TYPE_FLOAT,
+            ],
+        ],
+        'special_price_incl_tax'=> [
+            'function'      => [__CLASS__, 'getSpecialPriceInclTax'],
+            'type'          => Meta::ELASTIC_TYPE_FLOAT,
+            'elastic_types' => [
+                Meta::ELASTIC_TYPE_FLOAT,
+            ],
+        ],
+        'original_price'             => [
+            'function'      => [__CLASS__, 'getPriceTaxExcl'],
+            'type'          => Meta::ELASTIC_TYPE_FLOAT,
+            'elastic_types' => [
+                Meta::ELASTIC_TYPE_FLOAT,
+            ],
+        ],
+        'original_price_incl_tax'             => [
+            'function'      => [__CLASS__, 'getPriceTaxIncl'],
             'type'          => Meta::ELASTIC_TYPE_FLOAT,
             'elastic_types' => [
                 Meta::ELASTIC_TYPE_FLOAT,
@@ -154,7 +186,7 @@ class ProductFetcher extends Fetcher
                 'category_id'   => ['type' => Meta::ELASTIC_TYPE_INTEGER],
                 'is_parent'     => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
                 'is_virtual'    => ['type' => Meta::ELASTIC_TYPE_TEXT],
-                'name'          => ['type' => Meta::ELASTIC_TYPE_TEXT],
+                'name'          => ['type' => Meta::ELASTIC_TYPE_KEYWORD],
                 'position'      => ['type' => Meta::ELASTIC_TYPE_INTEGER],
 
             ],
@@ -210,6 +242,8 @@ class ProductFetcher extends Fetcher
                 'product_id'  => ['type' => Meta::ELASTIC_TYPE_INTEGER],
                 'stock_id'    => ['type' => Meta::ELASTIC_TYPE_INTEGER],
                 'qty'         => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'qty_available_now' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'qty_available_later' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
                 'is_in_stock' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
                 'is_qty_decimal' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
                 'show_default_notification_message' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
@@ -232,6 +266,8 @@ class ProductFetcher extends Fetcher
                 'low_stock_date' => ['type' => Meta::ELASTIC_TYPE_DATE],
                 'is_decimal_divided' => ['type' => Meta::ELASTIC_TYPE_BOOLEAN],
                 'stock_status_changed_auto' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'handling_time' => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'handling_time_oos' => ['type' => Meta::ELASTIC_TYPE_INTEGER]
             ],
         ],
         'media_gallery' => [
@@ -296,16 +332,12 @@ class ProductFetcher extends Fetcher
                 Meta::ELASTIC_TYPE_INTEGER,
             ],
         ],
-        'manufacturer_name'            => [
+        'manufacturer'            => [
             'function'      => [__CLASS__, 'getManufacturerName'],
-            'type'       => Meta::ELASTIC_TYPE_TEXT,
-            'elastic_types' => [
-                Meta::ELASTIC_TYPE_KEYWORD,
-                Meta::ELASTIC_TYPE_TEXT,
-            ],
+            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
-        'manufacturer_agg'            => [
-            'function'      => [__CLASS__, 'getManufacturerName'],
+        'manufacturer_id'            => [
+            'function'      => [__CLASS__, 'getManufacturerId'],
             'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
         'minimal_quantity'        => [
@@ -419,7 +451,7 @@ class ProductFetcher extends Fetcher
             foreach (Product::getFrontFeaturesStatic($idLang, $idEntity) as $feature) {
                 $featureName = str_replace(' ','_',mb_strtolower($feature['name']));
                 if (!isset($elasticObject->{$featureName})) {
-                    $elasticObject->{$featureName} = array_map('trim', explode(",", $feature['value']));
+                    $elasticObject->{$featureName} = array_map('trim', explode(",", mb_strtolower($feature['value'])));
                 }
             }
         } catch (PrestaShopException $e) {
@@ -582,6 +614,73 @@ class ProductFetcher extends Fetcher
     protected static function getPriceTaxExcl($product)
     {
         return (float) static::getProductBasePrice($product->id);
+    }
+
+    protected static function getPriceTaxIncl($product)
+    {
+        return (float) Product::getPriceStatic($product->id, 
+        $usetax = true,
+        $idProductAttribute = null,
+        $decimals = 2,
+        $divisor = null,
+        $onlyReduc = false,
+        $usereduc = false,
+        $quantity = 1,
+        $forceAssociatedTax = false,
+        $idCustomer = null,
+        $idCart = null,
+        $idAddress = null,
+        $specificPriceOutput = null,
+        $withEcotax = false,
+        $useGroupReduction = false,
+        null,
+        $useCustomerPrice = false);
+    }
+    
+    protected static function getSpecialPrice($product)
+    {
+        return (float) Product::getPriceStatic($product->id, 
+        $usetax = false,
+        $idProductAttribute = null,
+        $decimals = 2,
+        $divisor = null,
+        $onlyReduc = false,
+        $usereduc = true,
+        $quantity = 1,
+        $forceAssociatedTax = false,
+        $idCustomer = null,
+        $idCart = null,
+        $idAddress = null,
+        $specificPriceOutput = null,
+        $withEcotax = true,
+        $useGroupReduction = true,
+        null,
+        $useCustomerPrice = true);
+    }
+    protected static function getSpecialPriceInclTax($product)
+    {
+        return (float) Product::getPriceStatic($product->id, 
+        $usetax = true,
+        $idProductAttribute = null,
+        $decimals = 2,
+        $divisor = null,
+        $onlyReduc = false,
+        $usereduc = true,
+        $quantity = 1,
+        $forceAssociatedTax = false,
+        $idCustomer = null,
+        $idCart = null,
+        $idAddress = null,
+        $specificPriceOutput = null,
+        $withEcotax = true,
+        $useGroupReduction = true,
+        null,
+        $useCustomerPrice = true);
+    }
+
+    protected static function getNameAutocomplete($product)
+    {
+        return $product->name .' '.$product->reference .' '.$product->ean13 .' '.$product->id .' '.static::getManufacturerName($product);
     }
 
     /**
@@ -757,10 +856,12 @@ class ProductFetcher extends Fetcher
         $categories=[];
         foreach ($categoryIds as $idCategory) {
             $category = new \Category($idCategory, $idLang);
-            $categories[]= array(
-                'category_id'  => $idCategory,
-                'name'         => $category->name
-            );
+            if ($category->active) {
+                $categories[]= array(
+                    'category_id'  => $idCategory,
+                    'name'         => $category->name
+                );
+            }
         }
         return $categories;
     }
@@ -850,6 +951,18 @@ class ProductFetcher extends Fetcher
 
             return '';
         }
+    }
+
+    /**
+     * Get manufacturer id
+     *
+     * @param Product $product
+     *
+     * @return int
+     */
+    protected static function getManufacturerId(Product $product)
+    {
+        return $product->id_manufacturer;
     }
 
     /**
@@ -1068,12 +1181,15 @@ class ProductFetcher extends Fetcher
     protected static function getStock(Product $product)
     {
         $stockAvailable = new StockAvailable(StockAvailable::getStockAvailableIdByProductId($product->id));
+        $supplierQty    = StockAvailable::getSupplierQuantityAvailableByProduct($product->id);
         return [
             'item_id'     => $product->id,
             'product_id'  => $product->id,
             'stock_id'    => $stockAvailable->id,
-            'qty'         => $stockAvailable->quantity,
-            'is_in_stock' => (int)(bool)$stockAvailable->quantity,
+            'qty'         => (int)$stockAvailable->quantity + $supplierQty,
+            'qty_available_now' => (int)$stockAvailable->quantity,
+            'qty_available_later' => $supplierQty,
+            'is_in_stock' => (int)((bool)$stockAvailable->quantity || ProductFetcher::getAllowOosp($product)),
             'is_qty_decimal' => true,
             'show_default_notification_message' => false,
             'use_config_min_qty' => false,
@@ -1094,6 +1210,8 @@ class ProductFetcher extends Fetcher
             'manage_stock' => false,
             'is_decimal_divided' => false,
             'stock_status_changed_auto' => 0,
+            'handling_time' => (int) $product->available_now,
+            'handling_time_oos' => (int) $product->available_later
         ];
 
     }
@@ -1130,7 +1248,7 @@ class ProductFetcher extends Fetcher
     {
         $mediaGallery=[];
         foreach ($product->getImages($idLang) as $image) {
-            $imagePath= '/img/p/'.chunk_split($image['id_image'], 1, '/').$image['id_image'].'.jpg'; //todo: generate dynamic image path
+            $imagePath= 'https://maleomi.pl/img/p/'.chunk_split($image['id_image'], 1, '/').$image['id_image'].'.jpg'; //todo: generate dynamic image path
             $mediaGallery[]=array(
                 'image' => $imagePath,
                 'lab'   => $image['legend'],
@@ -1144,7 +1262,7 @@ class ProductFetcher extends Fetcher
     protected static function getImage(Product $product, $idLang)
     {
         $id_image = $product->getCoverWs($idLang);
-        return '/img/p/'.chunk_split($id_image, 1, '/').$id_image.'.jpg';
+        return 'https://maleomi.pl/img/p/'.chunk_split($id_image, 1, '/').$id_image.'.jpg';
     }
 
     /**
