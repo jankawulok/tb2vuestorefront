@@ -133,7 +133,10 @@ class CategoryFetcher extends Fetcher
             'function'      => [__CLASS__, 'getFilters'],
             'type'          => Meta::ELASTIC_TYPE_KEYWORD,
         ],
-
+        'meta_title'        => [
+            'function'      => null,
+            'type'          => Meta::ELASTIC_TYPE_TEXT,
+        ]
     ];
 
     public static function initObject(int $idEntity, int $idLang, int $idShop)

@@ -154,6 +154,7 @@ abstract class Fetcher
             if (isset($propItems['children']))
             {
                 $properties[$propName]=[];
+                $properties[$propName]['type'] = "nested";
                 foreach ($propItems['children'] as $childrenName => $childrenItems) {
                     $properties[$propName]['properties'][$childrenName] = [
                         'type' => $childrenItems['type']

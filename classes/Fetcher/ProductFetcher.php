@@ -35,6 +35,7 @@ use ImageType;
 use Link;
 use Logger;
 use Manufacturer;
+use Module;
 use Page;
 use phpDocumentor\Reflection\Types\Integer;
 use PrestaShopException;
@@ -188,6 +189,9 @@ class ProductFetcher extends Fetcher
                 'is_virtual'    => ['type' => Meta::ELASTIC_TYPE_TEXT],
                 'name'          => ['type' => Meta::ELASTIC_TYPE_KEYWORD],
                 'position'      => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'level_depth'   => ['type' => Meta::ELASTIC_TYPE_INTEGER],
+                'slug'          => ['type' => Meta::ELASTIC_TYPE_KEYWORD],
+                'id_parent'     => ['type' => Meta::ELASTIC_TYPE_INTEGER],
 
             ],
         ],
@@ -228,7 +232,7 @@ class ProductFetcher extends Fetcher
             'type'          => Meta::ELASTIC_TYPE_KEYWORD,
         ],
         'description'       => [
-            'function'      => null,
+            'function'      => [__CLASS__, 'getDescription'],
             'type'          => Meta::ELASTIC_TYPE_TEXT,
         ],
         'short_description' => [
@@ -332,8 +336,15 @@ class ProductFetcher extends Fetcher
                 Meta::ELASTIC_TYPE_INTEGER,
             ],
         ],
-        'manufacturer'            => [
+        'manufacturer_link'            => [
+            'function'      => [__CLASS__, 'getManufacturerLink'],
+            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
+        ],        'manufacturer'            => [
             'function'      => [__CLASS__, 'getManufacturerName'],
+            'type'       => Meta::ELASTIC_TYPE_KEYWORD,
+        ],
+        'manufacturer_logo'            => [
+            'function'      => [__CLASS__, 'getManufacturerLogo'],
             'type'       => Meta::ELASTIC_TYPE_KEYWORD,
         ],
         'manufacturer_id'            => [
@@ -417,6 +428,9 @@ class ProductFetcher extends Fetcher
         ],
         'meta'           => [
             'function'      => [__CLASS__, 'getMeta'],
+        ],
+        'specs'           => [
+            'function'      => [__CLASS__, 'getSpecs'],
         ],
     ];
 
@@ -815,9 +829,16 @@ class ProductFetcher extends Fetcher
      */
     protected static function getCategoriesNamesWithoutPath($product, $idLang)
     {
-        return array_values(array_filter(array_unique(array_map(function ($fullCategory) {
-            return end(array_pad(explode(' /// ', $fullCategory), 1, ''));
-        }, static::getCategoriesNames($product, $idLang)))));
+        return array_values(
+            array_filter(
+                array_unique(
+                    array_map(function ($fullCategory) {
+                        return end(array_pad(explode(' /// ', $fullCategory), 1, ''));
+                        }, static::getCategoriesNames($product, $idLang)
+                    )
+                )
+            )
+        );
     }
 
     /**
@@ -859,7 +880,11 @@ class ProductFetcher extends Fetcher
             if ($category->active) {
                 $categories[]= array(
                     'category_id'  => $idCategory,
-                    'name'         => $category->name
+                    'name'         => $category->name,
+                    'level_depth'  => $category->level_depth,
+                    'slug'         => $category->link_rewrite,
+                    'id_parent'    => $category->id_parent
+
                 );
             }
         }
@@ -925,6 +950,16 @@ class ProductFetcher extends Fetcher
         return array_values(array_filter($categoryPaths));
     }
 
+    protected static function getDescription(Product $product)
+    {
+        // if((bool)Module::isEnabled('smartshortcode'))
+        // {
+        //     $smartshortcode = Module::getInstanceByName('smartshortcode');
+        //     return $smartshortcode->parse($product->description);
+        // }
+        return $product->description;
+    }
+
     /**
      * @param Product $product
      *
@@ -946,6 +981,22 @@ class ProductFetcher extends Fetcher
     {
         try {
             return Manufacturer::getNameById((int) $product->id_manufacturer);
+        } catch (PrestaShopException $e) {
+            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+
+            return '';
+        }
+    }
+
+    protected static function getManufacturerLogo(Product $product, ?int $idLang)
+    {
+        return '/m/'.$product->id_manufacturer . '.jpg';
+    }
+    protected static function getManufacturerLink(Product $product)
+    {
+        try {
+            $manufacturer = new Manufacturer((int) $product->id_manufacturer);
+            return $manufacturer->link_rewrite;
         } catch (PrestaShopException $e) {
             Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
 
@@ -1121,7 +1172,9 @@ class ProductFetcher extends Fetcher
     protected static function getInStock(Product $product)
     {
         try {
-            return (bool) Product::getQuantity($product->id) > 0;
+            $stockAvailable = new StockAvailable(StockAvailable::getStockAvailableIdByProductId($product->id));
+            $supplierQty    = StockAvailable::getSupplierQuantityAvailableByProduct($product->id);
+            return (bool)((bool)$stockAvailable->quantity || ProductFetcher::getAllowOosp($product));
         } catch (PrestaShopException $e) {
             Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
 
@@ -1248,7 +1301,7 @@ class ProductFetcher extends Fetcher
     {
         $mediaGallery=[];
         foreach ($product->getImages($idLang) as $image) {
-            $imagePath= 'https://maleomi.pl/img/p/'.chunk_split($image['id_image'], 1, '/').$image['id_image'].'.jpg'; //todo: generate dynamic image path
+            $imagePath= '/p/'.chunk_split($image['id_image'], 1, '/').$image['id_image'].'.jpg'; //todo: generate dynamic image path
             $mediaGallery[]=array(
                 'image' => $imagePath,
                 'lab'   => $image['legend'],
@@ -1262,7 +1315,20 @@ class ProductFetcher extends Fetcher
     protected static function getImage(Product $product, $idLang)
     {
         $id_image = $product->getCoverWs($idLang);
-        return 'https://maleomi.pl/img/p/'.chunk_split($id_image, 1, '/').$id_image.'.jpg';
+        return '/p/'.chunk_split($id_image, 1, '/').$id_image.'.jpg';
+    }
+
+    protected static function getSpecs(Product $product, $idLang)
+    {
+        $attributes  = [];
+        try {
+            foreach (Product::getFrontFeaturesStatic($idLang, $product->id) as $feature) {
+                $attributes[$feature['name']] = $feature['value'];
+            }
+        } catch (PrestaShopException $e) {
+            Logger::addLog("Elasticsearch module error: {$e->getMessage()}");
+        }
+        return $attributes;
     }
 
     /**
